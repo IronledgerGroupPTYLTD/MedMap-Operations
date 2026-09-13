@@ -27,10 +27,10 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Command centre", section: "overview", icon: LayoutDashboard },
-  { label: "Operations", section: "operations", icon: Activity },
+  { label: "Operations", section: "operations", icon: Activity, path: "/operations" },
   { label: "Commercial", section: "commercial", icon: BriefcaseBusiness },
-  { label: "People & goals", section: "people", icon: Users },
-  { label: "Financial health", section: "finance", icon: Gauge },
+  { label: "People & goals", section: "people", icon: Users, path: "/people" },
+  { label: "Financial health", section: "finance", icon: Gauge, path: "/finance" },
   { label: "Technology", section: "technology", icon: Zap },
   { label: "Risk & governance", section: "governance", icon: ShieldCheck },
 ];
@@ -40,6 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const pageTitle = location.pathname === "/architecture" ? "Data architecture" : location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : "Command centre";
 
   const jumpToSection = (section: string) => {
     setMobileOpen(false);
@@ -82,20 +83,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="mt-9 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Workspace</div>
         <nav className="mt-3 space-y-1">
-          {navItems.map(({ label, section, icon: Icon }, index) => (
-            <button
-              key={section}
-              onClick={() => jumpToSection(section)}
-              className={cn(
-                "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white",
-                index === 0 && location.pathname === "/" && "bg-white/[0.09] text-white shadow-[inset_3px_0_0_#84e0c3]",
-              )}
-            >
-              <Icon size={17} strokeWidth={1.8} className={cn("text-slate-500 transition group-hover:text-[#84e0c3]", index === 0 && location.pathname === "/" && "text-[#84e0c3]")} />
-              <span>{label}</span>
-              {section === "overview" && <span className="ml-auto size-1.5 rounded-full bg-[#84e0c3]" />}
-            </button>
-          ))}
+          {navItems.map(({ label, section, icon: Icon, path }, index) => {
+            const active = path ? location.pathname === path : index === 0 && location.pathname === "/";
+            const content = <><Icon size={17} strokeWidth={1.8} className={cn("text-slate-500 transition group-hover:text-[#84e0c3]", active && "text-[#84e0c3]")} /><span>{label}</span>{section === "overview" && <span className="ml-auto size-1.5 rounded-full bg-[#84e0c3]" />}</>;
+            return path ? <Link key={section} to={path} onClick={() => setMobileOpen(false)} className={cn("group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white", active && "bg-white/[0.09] text-white shadow-[inset_3px_0_0_#84e0c3]")}>{content}</Link> : <button key={section} onClick={() => jumpToSection(section)} className={cn("group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white", active && "bg-white/[0.09] text-white shadow-[inset_3px_0_0_#84e0c3]")}>{content}</button>;
+          })}
           <Link
             to="/architecture"
             onClick={() => setMobileOpen(false)}
@@ -121,10 +113,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <FileText size={17} strokeWidth={1.8} className="text-slate-500 group-hover:text-[#84e0c3]" />
             <span>Decision log</span>
           </button>
-          <button onClick={() => jumpToSection("operations")} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white">
+          <Link to="/operations" onClick={() => setMobileOpen(false)} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white">
             <LifeBuoy size={17} strokeWidth={1.8} className="text-slate-500 group-hover:text-[#84e0c3]" />
             <span>Support cases</span>
-          </button>
+          </Link>
         </nav>
 
         <div className="mt-auto pt-8">
@@ -146,8 +138,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 shadow-sm lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
               <Menu size={18} />
             </button>
-            <div className="hidden items-center gap-2 text-[12px] text-slate-400 sm:flex"><span className="font-semibold text-slate-700">MedMap</span><span>/</span><span>{location.pathname === "/architecture" ? "Data architecture" : "Command centre"}</span></div>
-            <div className="flex items-center gap-2 text-[12px] text-slate-500 sm:hidden"><Boxes size={15} className="text-[#1f9d80]" /> {location.pathname === "/architecture" ? "Data architecture" : "Command centre"}</div>
+            <div className="hidden items-center gap-2 text-[12px] text-slate-400 sm:flex"><span className="font-semibold text-slate-700">MedMap</span><span>/</span><span>{pageTitle}</span></div>
+            <div className="flex items-center gap-2 text-[12px] text-slate-500 sm:hidden"><Boxes size={15} className="text-[#1f9d80]" /> {pageTitle}</div>
           </div>
           <div className="flex items-center gap-2.5">
             <label className="relative hidden md:block">

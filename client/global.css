@@ -99,6 +99,12 @@
   }
 }
 
+@layer components {
+  .form-input {
+    @apply mt-1.5 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11px] font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#84cbb8] focus:ring-4 focus:ring-[#84e0c3]/15;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

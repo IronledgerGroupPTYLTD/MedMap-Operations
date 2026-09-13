@@ -1,4 +1,4 @@
-import type { Transaction } from ./medmap-store;
+import type { Transaction } from "./medmap-store";
 
 export const workbookTransactions: Transaction[] = [
   {

@@ -3,18 +3,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   Bell,
-  BookOpen,
   Boxes,
   BriefcaseBusiness,
-  Building2,
   ChevronDown,
-  Database,
   FileText,
   Gauge,
   LayoutDashboard,
   LifeBuoy,
   Menu,
-  Network,
   Search,
   Settings2,
   ShieldCheck,
@@ -40,7 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const pageTitle = location.pathname === "/architecture" ? "Data architecture" : location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : "Command centre";
+  const pageTitle = location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : "Command centre";
 
   const jumpToSection = (section: string) => {
     setMobileOpen(false);
@@ -88,18 +84,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             const content = <><Icon size={17} strokeWidth={1.8} className={cn("text-slate-500 transition group-hover:text-[#84e0c3]", active && "text-[#84e0c3]")} /><span>{label}</span>{section === "overview" && <span className="ml-auto size-1.5 rounded-full bg-[#84e0c3]" />}</>;
             return path ? <Link key={section} to={path} onClick={() => setMobileOpen(false)} className={cn("group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white", active && "bg-white/[0.09] text-white shadow-[inset_3px_0_0_#84e0c3]")}>{content}</Link> : <button key={section} onClick={() => jumpToSection(section)} className={cn("group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white", active && "bg-white/[0.09] text-white shadow-[inset_3px_0_0_#84e0c3]")}>{content}</button>;
           })}
-          <Link
-            to="/architecture"
-            onClick={() => setMobileOpen(false)}
-            className={cn(
-              "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white",
-              location.pathname === "/architecture" && "bg-white/[0.09] text-white shadow-[inset_3px_0_0_#84e0c3]",
-            )}
-          >
-            <Network size={17} strokeWidth={1.8} className="text-slate-500 transition group-hover:text-[#84e0c3]" />
-            <span>Data architecture</span>
-            <span className="ml-auto rounded-md bg-[#84e0c3]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#84e0c3]">Core</span>
-          </Link>
         </nav>
 
         <div className="mt-8 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Control room</div>
@@ -123,7 +107,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3.5">
             <div className="flex items-center gap-2 text-[11px] font-semibold text-[#84e0c3]"><span className="size-1.5 rounded-full bg-[#84e0c3]" />All systems operational</div>
             <p className="mt-2 text-[11px] leading-5 text-slate-400">The source of truth is synced across 8 connected domains.</p>
-            <Link to="/architecture" className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-white hover:text-[#84e0c3]">View architecture <span aria-hidden>→</span></Link>
           </div>
           <div className="mt-4 flex items-center justify-between px-2 text-[11px] text-slate-500">
             <span>v1.0 · Internal</span>
@@ -159,12 +142,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-export const architectureLayers = [
-  { label: "Company", icon: Building2, color: "#84e0c3" },
-  { label: "People", icon: Users, color: "#b8a4f3" },
-  { label: "Commerce", icon: BriefcaseBusiness, color: "#f5be68" },
-  { label: "Operations", icon: Activity, color: "#f29b76" },
-  { label: "Intelligence", icon: Database, color: "#77b4f4" },
-  { label: "Governance", icon: BookOpen, color: "#d7a4e9" },
-];

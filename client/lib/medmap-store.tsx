@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState } from "react";
+import { workbookTransactions } from "./workbook-transactions";
 
 export const ticketTypeOptions = [
   "Customer case",
@@ -9,21 +10,25 @@ export const ticketTypeOptions = [
   "Security assessment",
   "People & performance",
   "General operations",
+  "Expense reimbursement",
 ] as const;
 
 export type TicketType = (typeof ticketTypeOptions)[number];
-export type TransactionKind = "revenue" | "expense";
+export type TransactionKind = "revenue" | "expense" | "funding";
 export type TransactionStatus = "Paid" | "Payable" | "Committed";
 
 export type Transaction = {
   id: string;
   date: string;
+  timestamp?: string;
   description: string;
   kind: TransactionKind;
   category: string;
   amount: number;
   status: TransactionStatus;
   owner: string;
+  owedTo?: string;
+  source?: string;
   notes: string;
 };
 
@@ -52,6 +57,8 @@ export type Ticket = {
   createdAt: string;
   dueDate: string;
   description: string;
+  amount?: number;
+  owedTo?: string;
 };
 
 export const viewPermissionOptions = [
@@ -65,28 +72,12 @@ export const viewPermissionOptions = [
   "Risk & governance",
 ] as const;
 
-const seededTransactions: Transaction[] = [
-  { id: "TX-260801", date: "2026-08-01", description: "Patient booking revenue", kind: "revenue", category: "Patient bookings", amount: 12000, status: "Paid", owner: "Kuhlula Madumo", notes: "Completed bookings cleared for August." },
-  { id: "TX-260805", date: "2026-08-05", description: "Premium patient subscriptions", kind: "revenue", category: "Premium subscriptions", amount: 3900, status: "Paid", owner: "Kuhlula Madumo", notes: "Quarterly Premium subscriptions." },
-  { id: "TX-260812", date: "2026-08-12", description: "Doctor Member subscriptions", kind: "revenue", category: "Doctor Member", amount: 9900, status: "Paid", owner: "Kuhlula Madumo", notes: "Member tier monthly recurring revenue." },
-  { id: "TX-260820", date: "2026-08-20", description: "Doctor Partner subscriptions", kind: "revenue", category: "Doctor Partner", amount: 14970, status: "Paid", owner: "Kuhlula Madumo", notes: "Partner tier monthly recurring revenue." },
-  { id: "TX-260901", date: "2026-09-01", description: "Patient booking revenue", kind: "revenue", category: "Patient bookings", amount: 9800, status: "Paid", owner: "Kuhlula Madumo", notes: "September completed bookings to date." },
-  { id: "TX-260903", date: "2026-09-03", description: "Premium patient subscriptions", kind: "revenue", category: "Premium subscriptions", amount: 1950, status: "Paid", owner: "Kuhlula Madumo", notes: "September new and renewed Premium accounts." },
-  { id: "TX-260803", date: "2026-08-03", description: "Product and technology services", kind: "expense", category: "Technology", amount: 12500, status: "Paid", owner: "Selaelo Langa", notes: "Hosting, software and engineering tooling." },
-  { id: "TX-260809", date: "2026-08-09", description: "Growth campaign spend", kind: "expense", category: "Marketing", amount: 9800, status: "Paid", owner: "Kuhlula Madumo", notes: "Doctor and patient acquisition activity." },
-  { id: "TX-260816", date: "2026-08-16", description: "Legal and compliance setup", kind: "expense", category: "Legal & compliance", amount: 4200, status: "Paid", owner: "Ofentse Mashau", notes: "Corporate and compliance support." },
-  { id: "TX-260831", date: "2026-08-31", description: "August salaries payable", kind: "expense", category: "Salaries payable", amount: 42000, status: "Payable", owner: "Ofentse Mashau", notes: "Payroll accrual; payable at month end." },
-  { id: "TX-260831B", date: "2026-08-31", description: "Ambassador commissions paid", kind: "expense", category: "Commissions", amount: 8400, status: "Paid", owner: "Kuhlula Madumo", notes: "Approved commissions on attributed activity." },
-  { id: "TX-260902", date: "2026-09-02", description: "Hosting and infrastructure", kind: "expense", category: "Infrastructure", amount: 5400, status: "Paid", owner: "Selaelo Langa", notes: "Cloud, monitoring and infrastructure services." },
-  { id: "TX-260904", date: "2026-09-04", description: "Customer operations support", kind: "expense", category: "Customer operations", amount: 6100, status: "Committed", owner: "Kuhlula Madumo", notes: "Partner support and service operations." },
-  { id: "TX-260930", date: "2026-09-30", description: "September salaries payable", kind: "expense", category: "Salaries payable", amount: 42000, status: "Payable", owner: "Ofentse Mashau", notes: "Forecast payroll obligation for September." },
-  { id: "TX-260930B", date: "2026-09-30", description: "September commissions payable", kind: "expense", category: "Commissions", amount: 6200, status: "Payable", owner: "Kuhlula Madumo", notes: "Accrued commission estimate for September." },
-];
+const seededTransactions: Transaction[] = workbookTransactions;
 
 const seededEmployees: Employee[] = [
   { id: "EMP-001", name: "Ofentse Mashau", email: "ofentse@medmap.co.za", position: "Founder & CEO", department: "Executive", manager: "—", executive: "Ofentse Mashau", role: "CEO", employmentStatus: "Active", viewPermissions: [...viewPermissionOptions], ticketTypes: [...ticketTypeOptions] },
-  { id: "EMP-002", name: "Kuhlula Madumo", email: "kuhlula@medmap.co.za", position: "Chief Operating Officer", department: "Operations", manager: "Ofentse Mashau", executive: "Ofentse Mashau", role: "COO", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "People & performance", "Doctor operations", "Risk & governance"], ticketTypes: ["Customer case", "Doctor onboarding", "Sales & acquisition", "General operations", "People & performance"] },
-  { id: "EMP-003", name: "Selaelo Langa", email: "selaelo@medmap.co.za", position: "Chief Technology Officer", department: "Technology", manager: "Ofentse Mashau", executive: "Ofentse Mashau", role: "CTO", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "Technology & security", "Risk & governance"], ticketTypes: ["Technology incident", "Security assessment", "General operations"] },
+  { id: "EMP-002", name: "Kuhlula Madumo", email: "kuhlula@medmap.co.za", position: "Chief Operating Officer", department: "Operations", manager: "Ofentse Mashau", executive: "Ofentse Mashau", role: "COO", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "People & performance", "Doctor operations", "Risk & governance"], ticketTypes: ["Customer case", "Doctor onboarding", "Sales & acquisition", "General operations", "People & performance", "Expense reimbursement"] },
+  { id: "EMP-003", name: "Selaelo Langa", email: "selaelo@medmap.co.za", position: "Chief Technology Officer", department: "Technology", manager: "Ofentse Mashau", executive: "Ofentse Mashau", role: "CTO", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "Technology & security", "Risk & governance"], ticketTypes: ["Technology incident", "Security assessment", "General operations", "Expense reimbursement"] },
   { id: "EMP-004", name: "Thabo Ndlovu", email: "thabo@medmap.co.za", position: "Doctor Acquisition Lead", department: "Operations", manager: "Kuhlula Madumo", executive: "Ofentse Mashau", role: "Employee", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "Doctor operations"], ticketTypes: ["Doctor onboarding", "Sales & acquisition", "General operations"] },
 ];
 
@@ -110,11 +101,12 @@ type MedMapContextValue = MedMapState & {
   updateEmployee: (id: string, patch: Partial<Employee>) => void;
   addTicket: (ticket: Omit<Ticket, "id">) => void;
   updateTicket: (id: string, patch: Partial<Ticket>) => void;
+  deleteTicket: (id: string) => void;
   resetDemoData: () => void;
 };
 
 const initialState: MedMapState = { transactions: seededTransactions, employees: seededEmployees, tickets: seededTickets };
-const storageKey = "medmap-operating-system-v1";
+const storageKey = "medmap-operating-system-v2-real-ledger";
 
 function loadState(): MedMapState {
   if (typeof window === "undefined") return initialState;
@@ -148,6 +140,7 @@ export function MedMapProvider({ children }: { children: React.ReactNode }) {
     updateEmployee: (id, patch) => updateState((current) => ({ ...current, employees: current.employees.map((item) => item.id === id ? { ...item, ...patch } : item) })),
     addTicket: (ticket) => updateState((current) => ({ ...current, tickets: [{ ...ticket, id: `TKT-${1043 + current.tickets.length}` }, ...current.tickets] })),
     updateTicket: (id, patch) => updateState((current) => ({ ...current, tickets: current.tickets.map((item) => item.id === id ? { ...item, ...patch } : item) })),
+    deleteTicket: (id) => updateState((current) => ({ ...current, tickets: current.tickets.filter((item) => item.id !== id) })),
     resetDemoData: () => { window.localStorage.removeItem(storageKey); setState(initialState); },
   }), [state]);
 

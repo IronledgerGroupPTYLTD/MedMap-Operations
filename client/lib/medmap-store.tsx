@@ -32,6 +32,15 @@ export type Transaction = {
   notes: string;
 };
 
+export type EmployeeDeliverable = {
+  id: string;
+  title: string;
+  cadence: "Weekly" | "Monthly" | "One-off";
+  dueDate: string;
+  status: "Not started" | "In progress" | "Done" | "Blocked";
+  notes: string;
+};
+
 export type Employee = {
   id: string;
   name: string;
@@ -44,6 +53,7 @@ export type Employee = {
   employmentStatus: "Active" | "On leave" | "Inactive";
   viewPermissions: string[];
   ticketTypes: TicketType[];
+  deliverables: EmployeeDeliverable[];
 };
 
 export type Ticket = {
@@ -120,10 +130,15 @@ export const viewPermissionOptions = [
 const seededTransactions: Transaction[] = workbookTransactions;
 
 const seededEmployees: Employee[] = [
-  { id: "EMP-001", name: "Ofentse Mashau", email: "ofentse@medmap.co.za", position: "Founder & CEO", department: "Executive", manager: "—", executive: "Ofentse Mashau", role: "CEO", employmentStatus: "Active", viewPermissions: [...viewPermissionOptions], ticketTypes: [...ticketTypeOptions] },
-  { id: "EMP-002", name: "Kuhlula Madumo", email: "kuhlula@medmap.co.za", position: "Chief Operating Officer", department: "Operations", manager: "Ofentse Mashau", executive: "Ofentse Mashau", role: "COO", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "People & performance", "Doctor operations", "Risk & governance"], ticketTypes: ["Customer case", "Doctor onboarding", "Sales & acquisition", "General operations", "People & performance", "Expense reimbursement"] },
-  { id: "EMP-003", name: "Selaelo Langa", email: "selaelo@medmap.co.za", position: "Chief Technology Officer", department: "Technology", manager: "Ofentse Mashau", executive: "Ofentse Mashau", role: "CTO", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "Technology & security", "Risk & governance"], ticketTypes: ["Technology incident", "Security assessment", "General operations", "Expense reimbursement"] },
-  { id: "EMP-004", name: "Thabo Ndlovu", email: "thabo@medmap.co.za", position: "Doctor Acquisition Lead", department: "Operations", manager: "Kuhlula Madumo", executive: "Ofentse Mashau", role: "Employee", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "Doctor operations"], ticketTypes: ["Doctor onboarding", "Sales & acquisition", "General operations"] },
+  { id: "EMP-001", name: "Ofentse Mashau", email: "ofentse@medmap.co.za", position: "Founder & CEO", department: "Executive", manager: "—", executive: "Ofentse Mashau", role: "CEO", employmentStatus: "Active", viewPermissions: [...viewPermissionOptions], ticketTypes: [...ticketTypeOptions], deliverables: [] },
+  { id: "EMP-002", name: "Kuhlula Madumo", email: "kuhlula@medmap.co.za", position: "Chief Operating Officer", department: "Operations", manager: "Ofentse Mashau", executive: "Ofentse Mashau", role: "COO", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "People & performance", "Doctor operations", "Risk & governance"], ticketTypes: ["Customer case", "Doctor onboarding", "Sales & acquisition", "General operations", "People & performance", "Expense reimbursement"], deliverables: [
+    { id: "DEL-COO-001", title: "Set weekly and monthly patient targets", cadence: "Monthly", dueDate: "2026-09-12", status: "Not started", notes: "Agree the first measurable patient target with the CEO and Operations team." },
+    { id: "DEL-COO-002", title: "Own doctor and ambassador acquisition operating plan", cadence: "Weekly", dueDate: "2026-09-08", status: "In progress", notes: "Turn the zero baseline into a named pipeline, owner and weekly review." },
+    { id: "DEL-COO-003", title: "Close partner onboarding pack", cadence: "One-off", dueDate: "2026-09-08", status: "In progress", notes: "Verify practice details and move the partner record to live." },
+    { id: "DEL-COO-004", title: "Run the weekly accountability meeting", cadence: "Weekly", dueDate: "2026-09-11", status: "Not started", notes: "Record decisions, owners and deadlines in Meetings & deadlines." },
+  ] },
+  { id: "EMP-003", name: "Selaelo Langa", email: "selaelo@medmap.co.za", position: "Chief Technology Officer", department: "Technology", manager: "Ofentse Mashau", executive: "Ofentse Mashau", role: "CTO", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "Technology & security", "Risk & governance"], ticketTypes: ["Technology incident", "Security assessment", "General operations", "Expense reimbursement"], deliverables: [] },
+  { id: "EMP-004", name: "Thabo Ndlovu", email: "thabo@medmap.co.za", position: "Doctor Acquisition Lead", department: "Operations", manager: "Kuhlula Madumo", executive: "Ofentse Mashau", role: "Employee", employmentStatus: "Active", viewPermissions: ["Company overview", "Operations & tickets", "Doctor operations"], ticketTypes: ["Doctor onboarding", "Sales & acquisition", "General operations"], deliverables: [] },
 ];
 
 const seededTickets: Ticket[] = [
@@ -163,8 +178,9 @@ type MedMapContextValue = MedMapState & {
   addTransaction: (transaction: Omit<Transaction, "id">) => void;
   updateTransaction: (id: string, patch: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
-  addEmployee: (employee: Omit<Employee, "id">) => void;
+  addEmployee: (employee: Omit<Employee, "id">) => string;
   updateEmployee: (id: string, patch: Partial<Employee>) => void;
+  deleteEmployee: (id: string) => void;
   addTicket: (ticket: Omit<Ticket, "id">) => void;
   updateTicket: (id: string, patch: Partial<Ticket>) => void;
   deleteTicket: (id: string) => void;
@@ -188,7 +204,16 @@ function loadState(): MedMapState {
   if (typeof window === "undefined") return initialState;
   try {
     const stored = window.localStorage.getItem(storageKey);
-    return stored ? { ...initialState, ...JSON.parse(stored) } : initialState;
+    if (!stored) return initialState;
+    const parsed = JSON.parse(stored) as Partial<MedMapState>;
+    return {
+      ...initialState,
+      ...parsed,
+      employees: (parsed.employees ?? initialState.employees).map((employee) => ({
+        ...employee,
+        deliverables: employee.deliverables ?? initialState.employees.find((seed) => seed.id === employee.id)?.deliverables ?? [],
+      })),
+    };
   } catch {
     return initialState;
   }
@@ -212,8 +237,9 @@ export function MedMapProvider({ children }: { children: React.ReactNode }) {
     addTransaction: (transaction) => updateState((current) => ({ ...current, transactions: [{ ...transaction, id: `TX-${Date.now()}` }, ...current.transactions] })),
     updateTransaction: (id, patch) => updateState((current) => ({ ...current, transactions: current.transactions.map((item) => item.id === id ? { ...item, ...patch } : item) })),
     deleteTransaction: (id) => updateState((current) => ({ ...current, transactions: current.transactions.filter((item) => item.id !== id) })),
-    addEmployee: (employee) => updateState((current) => ({ ...current, employees: [...current.employees, { ...employee, id: `EMP-${String(current.employees.length + 1).padStart(3, "0")}` }] })),
+    addEmployee: (employee) => { const id = `EMP-${Date.now()}`; updateState((current) => ({ ...current, employees: [...current.employees, { ...employee, id }] })); return id; },
     updateEmployee: (id, patch) => updateState((current) => ({ ...current, employees: current.employees.map((item) => item.id === id ? { ...item, ...patch } : item) })),
+    deleteEmployee: (id) => updateState((current) => ({ ...current, employees: current.employees.filter((item) => item.id !== id) })),
     addTicket: (ticket) => updateState((current) => ({ ...current, tickets: [{ ...ticket, id: `TKT-${1043 + current.tickets.length}` }, ...current.tickets] })),
     updateTicket: (id, patch) => updateState((current) => ({ ...current, tickets: current.tickets.map((item) => item.id === id ? { ...item, ...patch } : item) })),
     deleteTicket: (id) => updateState((current) => ({ ...current, tickets: current.tickets.filter((item) => item.id !== id) })),

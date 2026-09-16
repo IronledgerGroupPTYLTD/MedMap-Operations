@@ -163,6 +163,12 @@ const seededTechnologyWorkItems: TechnologyWorkItem[] = [
   { id: "TECH-003", title: "Migrate platform to AWS", status: "Outstanding", owner: "Selaelo Langa", followUp: "Define the migration plan, dependencies, cutover and rollback steps." },
   { id: "TECH-004", title: "Build the MedMap app", status: "Outstanding", owner: "Selaelo Langa", followUp: "Turn the product scope into an owned delivery plan with milestones." },
 ];
+const seededCOOWorkItems: TechnologyWorkItem[] = [
+  { id: "COO-001", title: "Set weekly and monthly patient targets", status: "Outstanding", owner: "Kuhlula Madumo", followUp: "Agree the first measurable patient target with the CEO and Operations team." },
+  { id: "COO-002", title: "Own doctor and ambassador acquisition plan", status: "In progress", owner: "Kuhlula Madumo", followUp: "Turn the zero baseline into a named pipeline, owner and weekly review." },
+  { id: "COO-003", title: "Close partner onboarding pack", status: "In progress", owner: "Kuhlula Madumo", followUp: "Verify practice details and move the partner record to live." },
+  { id: "COO-004", title: "Run the weekly accountability meeting", status: "Outstanding", owner: "Kuhlula Madumo", followUp: "Record decisions, owners and deadlines in Meetings & deadlines." },
+];
 
 type MedMapState = {
   transactions: Transaction[];
@@ -172,6 +178,7 @@ type MedMapState = {
   meetingDeadlines: MeetingDeadline[];
   departmentTargets: DepartmentTarget[];
   technologyWorkItems: TechnologyWorkItem[];
+  cooWorkItems: TechnologyWorkItem[];
 };
 
 type MedMapContextValue = MedMapState & {
@@ -194,10 +201,11 @@ type MedMapContextValue = MedMapState & {
   updateDepartmentTarget: (id: string, patch: Partial<DepartmentTarget>) => void;
   deleteDepartmentTarget: (id: string) => void;
   updateTechnologyWorkItem: (id: string, patch: Partial<TechnologyWorkItem>) => void;
+  updateCOOWorkItem: (id: string, patch: Partial<TechnologyWorkItem>) => void;
   resetDemoData: () => void;
 };
 
-const initialState: MedMapState = { transactions: seededTransactions, employees: seededEmployees, tickets: seededTickets, meetings: seededMeetings, meetingDeadlines: seededMeetingDeadlines, departmentTargets: seededDepartmentTargets, technologyWorkItems: seededTechnologyWorkItems };
+const initialState: MedMapState = { transactions: seededTransactions, employees: seededEmployees, tickets: seededTickets, meetings: seededMeetings, meetingDeadlines: seededMeetingDeadlines, departmentTargets: seededDepartmentTargets, technologyWorkItems: seededTechnologyWorkItems, cooWorkItems: seededCOOWorkItems };
 const storageKey = "medmap-operating-system-v2-real-ledger";
 
 function loadState(): MedMapState {
@@ -213,6 +221,7 @@ function loadState(): MedMapState {
         ...employee,
         deliverables: employee.deliverables ?? initialState.employees.find((seed) => seed.id === employee.id)?.deliverables ?? [],
       })),
+      cooWorkItems: parsed.cooWorkItems ?? initialState.cooWorkItems,
     };
   } catch {
     return initialState;
@@ -253,6 +262,7 @@ export function MedMapProvider({ children }: { children: React.ReactNode }) {
     updateDepartmentTarget: (id, patch) => updateState((current) => ({ ...current, departmentTargets: current.departmentTargets.map((item) => item.id === id ? { ...item, ...patch } : item) })),
     deleteDepartmentTarget: (id) => updateState((current) => ({ ...current, departmentTargets: current.departmentTargets.filter((item) => item.id !== id) })),
     updateTechnologyWorkItem: (id, patch) => updateState((current) => ({ ...current, technologyWorkItems: current.technologyWorkItems.map((item) => item.id === id ? { ...item, ...patch } : item) })),
+    updateCOOWorkItem: (id, patch) => updateState((current) => ({ ...current, cooWorkItems: current.cooWorkItems.map((item) => item.id === id ? { ...item, ...patch } : item) })),
     resetDemoData: () => { window.localStorage.removeItem(storageKey); setState(initialState); },
   }), [state]);
 

@@ -5,6 +5,7 @@ import {
   Bell,
   Boxes,
   BriefcaseBusiness,
+  CalendarDays,
   ChevronDown,
   FileText,
   Gauge,
@@ -26,6 +27,7 @@ const navItems = [
   { label: "Operations", section: "operations", icon: Activity, path: "/operations" },
   { label: "Commercial", section: "commercial", icon: BriefcaseBusiness },
   { label: "People & goals", section: "people", icon: Users, path: "/people" },
+  { label: "Meetings & deadlines", section: "meetings", icon: CalendarDays, path: "/meetings" },
   { label: "Financial health", section: "finance", icon: Gauge, path: "/finance" },
   { label: "Technology", section: "technology", icon: Zap },
   { label: "Risk & governance", section: "governance", icon: ShieldCheck },
@@ -36,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const pageTitle = location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : "Command centre";
+  const pageTitle = location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : location.pathname === "/meetings" ? "Meetings & deadlines" : "Command centre";
 
   const jumpToSection = (section: string) => {
     setMobileOpen(false);

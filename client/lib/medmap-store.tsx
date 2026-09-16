@@ -61,6 +61,38 @@ export type Ticket = {
   owedTo?: string;
 };
 
+export type Meeting = {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  status: "Planned" | "Held" | "Cancelled";
+  attendees: string;
+  notes: string;
+  decisions: string;
+  createdAt: string;
+  source: "manual" | "medmap.co.za";
+};
+
+export type MeetingDeadline = {
+  id: string;
+  meetingId: string;
+  title: string;
+  dueDate: string;
+  owner: string;
+  status: "Open" | "In progress" | "Blocked" | "Done";
+  followUp: string;
+};
+
+export type AccountabilityMetrics = {
+  doctors: number;
+  ambassadors: number;
+  patients: number;
+  updatedAt: string;
+  source: "manual" | "medmap.co.za";
+  syncStatus: "Manual baseline" | "Ready to sync" | "Synced";
+};
+
 export const viewPermissionOptions = [
   "Company overview",
   "Financial health",
@@ -87,10 +119,24 @@ const seededTickets: Ticket[] = [
   { id: "TKT-1040", title: "Approve September commission run", type: "Finance approval", priority: "Normal", status: "Pending", requester: "Kuhlula Madumo", assigneeId: "EMP-001", createdAt: "2026-09-03", dueDate: "2026-09-06", description: "Confirm attributed activity before the payable run is released." },
 ];
 
+const seededMeetings: Meeting[] = [];
+const seededMeetingDeadlines: MeetingDeadline[] = [];
+const seededAccountabilityMetrics: AccountabilityMetrics = {
+  doctors: 286,
+  ambassadors: 42,
+  patients: 4821,
+  updatedAt: "2026-09-05",
+  source: "manual",
+  syncStatus: "Manual baseline",
+};
+
 type MedMapState = {
   transactions: Transaction[];
   employees: Employee[];
   tickets: Ticket[];
+  meetings: Meeting[];
+  meetingDeadlines: MeetingDeadline[];
+  accountabilityMetrics: AccountabilityMetrics;
 };
 
 type MedMapContextValue = MedMapState & {
@@ -102,10 +148,17 @@ type MedMapContextValue = MedMapState & {
   addTicket: (ticket: Omit<Ticket, "id">) => void;
   updateTicket: (id: string, patch: Partial<Ticket>) => void;
   deleteTicket: (id: string) => void;
+  addMeeting: (meeting: Omit<Meeting, "id">) => void;
+  updateMeeting: (id: string, patch: Partial<Meeting>) => void;
+  deleteMeeting: (id: string) => void;
+  addMeetingDeadline: (deadline: Omit<MeetingDeadline, "id">) => void;
+  updateMeetingDeadline: (id: string, patch: Partial<MeetingDeadline>) => void;
+  deleteMeetingDeadline: (id: string) => void;
+  updateAccountabilityMetrics: (patch: Partial<AccountabilityMetrics>) => void;
   resetDemoData: () => void;
 };
 
-const initialState: MedMapState = { transactions: seededTransactions, employees: seededEmployees, tickets: seededTickets };
+const initialState: MedMapState = { transactions: seededTransactions, employees: seededEmployees, tickets: seededTickets, meetings: seededMeetings, meetingDeadlines: seededMeetingDeadlines, accountabilityMetrics: seededAccountabilityMetrics };
 const storageKey = "medmap-operating-system-v2-real-ledger";
 
 function loadState(): MedMapState {
@@ -141,6 +194,13 @@ export function MedMapProvider({ children }: { children: React.ReactNode }) {
     addTicket: (ticket) => updateState((current) => ({ ...current, tickets: [{ ...ticket, id: `TKT-${1043 + current.tickets.length}` }, ...current.tickets] })),
     updateTicket: (id, patch) => updateState((current) => ({ ...current, tickets: current.tickets.map((item) => item.id === id ? { ...item, ...patch } : item) })),
     deleteTicket: (id) => updateState((current) => ({ ...current, tickets: current.tickets.filter((item) => item.id !== id) })),
+    addMeeting: (meeting) => updateState((current) => ({ ...current, meetings: [{ ...meeting, id: `MTG-${Date.now()}` }, ...current.meetings] })),
+    updateMeeting: (id, patch) => updateState((current) => ({ ...current, meetings: current.meetings.map((item) => item.id === id ? { ...item, ...patch } : item) })),
+    deleteMeeting: (id) => updateState((current) => ({ ...current, meetings: current.meetings.filter((item) => item.id !== id), meetingDeadlines: current.meetingDeadlines.filter((item) => item.meetingId !== id) })),
+    addMeetingDeadline: (deadline) => updateState((current) => ({ ...current, meetingDeadlines: [{ ...deadline, id: `DL-${Date.now()}` }, ...current.meetingDeadlines] })),
+    updateMeetingDeadline: (id, patch) => updateState((current) => ({ ...current, meetingDeadlines: current.meetingDeadlines.map((item) => item.id === id ? { ...item, ...patch } : item) })),
+    deleteMeetingDeadline: (id) => updateState((current) => ({ ...current, meetingDeadlines: current.meetingDeadlines.filter((item) => item.id !== id) })),
+    updateAccountabilityMetrics: (patch) => updateState((current) => ({ ...current, accountabilityMetrics: { ...current.accountabilityMetrics, ...patch, updatedAt: new Date().toISOString().slice(0, 10), source: "manual", syncStatus: "Ready to sync" } })),
     resetDemoData: () => { window.localStorage.removeItem(storageKey); setState(initialState); },
   }), [state]);
 

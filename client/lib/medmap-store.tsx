@@ -84,13 +84,26 @@ export type MeetingDeadline = {
   followUp: string;
 };
 
-export type AccountabilityMetrics = {
-  doctors: number;
-  ambassadors: number;
-  patients: number;
-  updatedAt: string;
-  source: "manual" | "medmap.co.za";
-  syncStatus: "Manual baseline" | "Ready to sync" | "Synced";
+export type TargetPeriod = "Weekly" | "Monthly";
+export type DepartmentTarget = {
+  id: string;
+  department: string;
+  metric: string;
+  period: TargetPeriod;
+  actual: number;
+  target: number;
+  unit: "count" | "milestone";
+  owner: string;
+  status: "Not set" | "On track" | "At risk" | "Outstanding";
+  notes: string;
+};
+
+export type TechnologyWorkItem = {
+  id: string;
+  title: string;
+  status: "Outstanding" | "In progress" | "Done";
+  owner: string;
+  followUp: string;
 };
 
 export const viewPermissionOptions = [
@@ -121,14 +134,20 @@ const seededTickets: Ticket[] = [
 
 const seededMeetings: Meeting[] = [];
 const seededMeetingDeadlines: MeetingDeadline[] = [];
-const seededAccountabilityMetrics: AccountabilityMetrics = {
-  doctors: 286,
-  ambassadors: 42,
-  patients: 4821,
-  updatedAt: "2026-09-05",
-  source: "manual",
-  syncStatus: "Manual baseline",
-};
+const seededDepartmentTargets: DepartmentTarget[] = [
+  { id: "TGT-001", department: "Commercial", metric: "Active doctors", period: "Weekly", actual: 0, target: 0, unit: "count", owner: "Thabo Ndlovu", status: "Not set", notes: "Set the first weekly doctor acquisition target in the team meeting." },
+  { id: "TGT-002", department: "Commercial", metric: "Active doctors", period: "Monthly", actual: 0, target: 0, unit: "count", owner: "Thabo Ndlovu", status: "Not set", notes: "Set the first monthly doctor acquisition target in the team meeting." },
+  { id: "TGT-003", department: "Commercial", metric: "Active ambassadors", period: "Weekly", actual: 0, target: 0, unit: "count", owner: "Kuhlula Madumo", status: "Not set", notes: "Set the first weekly ambassador target in the team meeting." },
+  { id: "TGT-004", department: "Commercial", metric: "Active ambassadors", period: "Monthly", actual: 0, target: 0, unit: "count", owner: "Kuhlula Madumo", status: "Not set", notes: "Set the first monthly ambassador target in the team meeting." },
+  { id: "TGT-005", department: "Operations", metric: "Active patients", period: "Weekly", actual: 0, target: 0, unit: "count", owner: "Kuhlula Madumo", status: "Not set", notes: "Set the first weekly patient growth target in the team meeting." },
+  { id: "TGT-006", department: "Operations", metric: "Active patients", period: "Monthly", actual: 0, target: 0, unit: "count", owner: "Kuhlula Madumo", status: "Not set", notes: "Set the first monthly patient growth target in the team meeting." },
+];
+const seededTechnologyWorkItems: TechnologyWorkItem[] = [
+  { id: "TECH-001", title: "Bookings not working", status: "Outstanding", owner: "Selaelo Langa", followUp: "Restore and verify the end-to-end booking flow." },
+  { id: "TECH-002", title: "Payments workflow outstanding", status: "Outstanding", owner: "Selaelo Langa", followUp: "Complete the payment workflow and test successful and failed payment paths." },
+  { id: "TECH-003", title: "Migrate platform to AWS", status: "Outstanding", owner: "Selaelo Langa", followUp: "Define the migration plan, dependencies, cutover and rollback steps." },
+  { id: "TECH-004", title: "Build the MedMap app", status: "Outstanding", owner: "Selaelo Langa", followUp: "Turn the product scope into an owned delivery plan with milestones." },
+];
 
 type MedMapState = {
   transactions: Transaction[];
@@ -136,7 +155,8 @@ type MedMapState = {
   tickets: Ticket[];
   meetings: Meeting[];
   meetingDeadlines: MeetingDeadline[];
-  accountabilityMetrics: AccountabilityMetrics;
+  departmentTargets: DepartmentTarget[];
+  technologyWorkItems: TechnologyWorkItem[];
 };
 
 type MedMapContextValue = MedMapState & {
@@ -154,11 +174,14 @@ type MedMapContextValue = MedMapState & {
   addMeetingDeadline: (deadline: Omit<MeetingDeadline, "id">) => void;
   updateMeetingDeadline: (id: string, patch: Partial<MeetingDeadline>) => void;
   deleteMeetingDeadline: (id: string) => void;
-  updateAccountabilityMetrics: (patch: Partial<AccountabilityMetrics>) => void;
+  addDepartmentTarget: (target: Omit<DepartmentTarget, "id">) => void;
+  updateDepartmentTarget: (id: string, patch: Partial<DepartmentTarget>) => void;
+  deleteDepartmentTarget: (id: string) => void;
+  updateTechnologyWorkItem: (id: string, patch: Partial<TechnologyWorkItem>) => void;
   resetDemoData: () => void;
 };
 
-const initialState: MedMapState = { transactions: seededTransactions, employees: seededEmployees, tickets: seededTickets, meetings: seededMeetings, meetingDeadlines: seededMeetingDeadlines, accountabilityMetrics: seededAccountabilityMetrics };
+const initialState: MedMapState = { transactions: seededTransactions, employees: seededEmployees, tickets: seededTickets, meetings: seededMeetings, meetingDeadlines: seededMeetingDeadlines, departmentTargets: seededDepartmentTargets, technologyWorkItems: seededTechnologyWorkItems };
 const storageKey = "medmap-operating-system-v2-real-ledger";
 
 function loadState(): MedMapState {
@@ -200,7 +223,10 @@ export function MedMapProvider({ children }: { children: React.ReactNode }) {
     addMeetingDeadline: (deadline) => updateState((current) => ({ ...current, meetingDeadlines: [{ ...deadline, id: `DL-${Date.now()}` }, ...current.meetingDeadlines] })),
     updateMeetingDeadline: (id, patch) => updateState((current) => ({ ...current, meetingDeadlines: current.meetingDeadlines.map((item) => item.id === id ? { ...item, ...patch } : item) })),
     deleteMeetingDeadline: (id) => updateState((current) => ({ ...current, meetingDeadlines: current.meetingDeadlines.filter((item) => item.id !== id) })),
-    updateAccountabilityMetrics: (patch) => updateState((current) => ({ ...current, accountabilityMetrics: { ...current.accountabilityMetrics, ...patch, updatedAt: new Date().toISOString().slice(0, 10), source: "manual", syncStatus: "Ready to sync" } })),
+    addDepartmentTarget: (target) => updateState((current) => ({ ...current, departmentTargets: [{ ...target, id: `TGT-${Date.now()}` }, ...current.departmentTargets] })),
+    updateDepartmentTarget: (id, patch) => updateState((current) => ({ ...current, departmentTargets: current.departmentTargets.map((item) => item.id === id ? { ...item, ...patch } : item) })),
+    deleteDepartmentTarget: (id) => updateState((current) => ({ ...current, departmentTargets: current.departmentTargets.filter((item) => item.id !== id) })),
+    updateTechnologyWorkItem: (id, patch) => updateState((current) => ({ ...current, technologyWorkItems: current.technologyWorkItems.map((item) => item.id === id ? { ...item, ...patch } : item) })),
     resetDemoData: () => { window.localStorage.removeItem(storageKey); setState(initialState); },
   }), [state]);
 

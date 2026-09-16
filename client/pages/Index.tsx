@@ -109,7 +109,7 @@ function RevenueChart({ period }: { period: keyof typeof chartSets }) {
 }
 
 export default function Index() {
-  const { transactions, tickets, meetings, meetingDeadlines, accountabilityMetrics } = useMedMap();
+  const { transactions, tickets, meetings, meetingDeadlines, departmentTargets } = useMedMap();
   const [period, setPeriod] = useState<keyof typeof chartSets>("30d");
   const [completedActions, setCompletedActions] = useState<string[]>([]);
   const [showAllRisks, setShowAllRisks] = useState(false);
@@ -124,9 +124,8 @@ export default function Index() {
   const overdueTickets = openTickets.filter((ticket) => ticket.dueDate < new Date().toISOString().slice(0, 10));
   const liveMetricData = metricData.map((metric) => {
     if (metric.label === "Actual revenue") return { ...metric, value: formatZAR(financials.revenue), change: `${revenueAchievement}%`, helper: "of R80,000 target", status: revenueAchievement >= 96 ? "healthy" as Status : "critical" as Status };
-    if (metric.label === "Active doctors") return { ...metric, value: accountabilityMetrics.doctors.toLocaleString("en-ZA"), change: "manual", helper: `updated ${formatDate(accountabilityMetrics.updatedAt)}` };
-    if (metric.label === "Active ambassadors") return { ...metric, value: accountabilityMetrics.ambassadors.toLocaleString("en-ZA"), change: "manual", helper: `updated ${formatDate(accountabilityMetrics.updatedAt)}` };
-    if (metric.label === "Active patients") return { ...metric, value: accountabilityMetrics.patients.toLocaleString("en-ZA"), change: "manual", helper: `updated ${formatDate(accountabilityMetrics.updatedAt)}` };
+    const target = departmentTargets.find((item) => item.metric === metric.label && item.period === "Monthly");
+    if (target) return { ...metric, value: target.actual.toLocaleString("en-ZA"), change: target.target > 0 ? `${target.target} target` : "target not set", helper: `${target.department} · monthly baseline`, status: target.status === "Outstanding" ? "critical" as Status : "attention" as Status };
     return { ...metric, value: String(openTickets.length), change: `${overdueTickets.length} overdue`, helper: "across all teams" };
   });
   const upcomingDeadlines = meetingDeadlines.filter((deadline) => deadline.status !== "Done").sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 4);

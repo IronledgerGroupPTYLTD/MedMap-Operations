@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMedMap } from "@/lib/medmap-store";
 
 const navItems = [
   { label: "Command centre", section: "overview", icon: LayoutDashboard },
@@ -38,6 +39,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const { technologyWorkItems } = useMedMap();
+  const outstandingTechnology = technologyWorkItems.filter((item) => item.status !== "Done");
   const pageTitle = location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : location.pathname === "/meetings" ? "Meetings & deadlines" : "Command centre";
 
   const jumpToSection = (section: string) => {
@@ -93,7 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button onClick={() => jumpToSection("governance")} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white">
             <Bell size={17} strokeWidth={1.8} className="text-slate-500 group-hover:text-[#f5be68]" />
             <span>Alert centre</span>
-            <span className="ml-auto grid size-5 place-items-center rounded-full bg-[#f5be68] text-[10px] font-bold text-[#182238]">3</span>
+            <span className="ml-auto grid size-5 place-items-center rounded-full bg-[#f5be68] text-[10px] font-bold text-[#182238]">{outstandingTechnology.length}</span>
           </button>
           <button onClick={() => jumpToSection("governance")} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.07] hover:text-white">
             <FileText size={17} strokeWidth={1.8} className="text-slate-500 group-hover:text-[#84e0c3]" />
@@ -107,8 +110,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="mt-auto pt-8">
           <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3.5">
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-[#84e0c3]"><span className="size-1.5 rounded-full bg-[#84e0c3]" />All systems operational</div>
-            <p className="mt-2 text-[11px] leading-5 text-slate-400">The source of truth is synced across 8 connected domains.</p>
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-[#f5be68]"><span className="size-1.5 rounded-full bg-[#f5be68]" />Attention required</div>
+            <p className="mt-2 text-[11px] leading-5 text-slate-400">{outstandingTechnology.length} technology blockers are currently outstanding.</p>
           </div>
           <div className="mt-4 flex items-center justify-between px-2 text-[11px] text-slate-500">
             <span>v1.0 · Internal</span>

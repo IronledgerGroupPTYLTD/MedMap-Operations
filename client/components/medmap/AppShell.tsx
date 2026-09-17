@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMedMap } from "@/lib/medmap-store";
+import { SupabaseConnectionDiagnostic } from "@/components/medmap/SupabaseConnectionDiagnostic";
 
 const navItems = [
   { label: "Command centre", section: "overview", icon: LayoutDashboard },
@@ -151,7 +152,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <main>{children}</main>
+        <main>{children}{location.pathname === "/admin" && <SupabaseConnectionDiagnostic />}</main>
       </div>
     </div>
   );

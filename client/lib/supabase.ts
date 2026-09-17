@@ -16,14 +16,20 @@ if (import.meta.env.DEV && !supabaseConfigured) {
   );
 }
 
+type SupabaseGlobal = typeof globalThis & {
+  __medmapSupabaseClient?: SupabaseClient;
+};
+
+const supabaseGlobal = globalThis as SupabaseGlobal;
+
 export const supabase: SupabaseClient | null = supabaseConfigured
-  ? createClient(supabaseUrl!, supabaseAnonKey!, {
+  ? (supabaseGlobal.__medmapSupabaseClient ??= createClient(supabaseUrl!, supabaseAnonKey!, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
       },
-    })
+    }))
   : null;
 
 export function getSupabaseClient() {
@@ -55,11 +61,10 @@ export async function getSupabaseHealth(): Promise<SupabaseHealth> {
 
   try {
     await supabase.auth.getSession();
-    const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+    const response = await fetch(`${supabaseUrl}/auth/v1/settings`, {
       method: "GET",
       headers: {
         apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
       },
     });
 

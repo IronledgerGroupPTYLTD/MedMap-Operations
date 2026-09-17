@@ -12,6 +12,8 @@ import Finance from "./pages/Finance";
 import People from "./pages/People";
 import Operations from "./pages/Operations";
 import Meetings from "./pages/Meetings";
+import KPIs from "./pages/KPIs";
+import ModulePage from "./pages/ModulePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,16 @@ const App = () => (
             <Route path="/people" element={<People />} />
             <Route path="/operations" element={<Operations />} />
             <Route path="/meetings" element={<Meetings />} />
+            <Route path="/kpis" element={<KPIs />} />
+            <Route path="/organization" element={<ModulePage module="organization" />} />
+            <Route path="/doctor-acquisition" element={<ModulePage module="doctor-acquisition" />} />
+            <Route path="/ambassadors" element={<ModulePage module="ambassadors" />} />
+            <Route path="/sales" element={<ModulePage module="sales" />} />
+            <Route path="/customer-operations" element={<ModulePage module="customer-operations" />} />
+            <Route path="/technology" element={<ModulePage module="technology" />} />
+            <Route path="/risk" element={<ModulePage module="risk" />} />
+            <Route path="/reports" element={<ModulePage module="reports" />} />
+            <Route path="/admin" element={<ModulePage module="admin" />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

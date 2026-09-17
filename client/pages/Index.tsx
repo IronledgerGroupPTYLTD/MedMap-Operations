@@ -49,7 +49,7 @@ function StethoscopeIcon(props: React.ComponentProps<"svg">) {
 }
 
 export default function Index() {
-  const { transactions, tickets, meetings, meetingDeadlines, departmentTargets, technologyWorkItems } = useMedMap();
+  const { transactions, tickets, meetings, meetingDeadlines, kpis, technologyWorkItems } = useMedMap();
   const [completedActions, setCompletedActions] = useState<string[]>([]);
   const financials = transactions.reduce((result, transaction) => {
     if (transaction.kind === "revenue") result.revenue += transaction.amount;
@@ -61,11 +61,11 @@ export default function Index() {
   const overdueTickets = openTickets.filter((ticket) => ticket.dueDate < new Date().toISOString().slice(0, 10));
   const openDeadlines = meetingDeadlines.filter((deadline) => deadline.status !== "Done").sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const outstandingTechnology = technologyWorkItems.filter((item) => item.status !== "Done");
-  const unconfiguredTargets = departmentTargets.filter((target) => target.target === 0);
-  const monthlyTarget = (metric: string) => departmentTargets.find((target) => target.metric === metric && target.period === "Monthly");
+  const unconfiguredTargets = kpis.filter((kpi) => kpi.target === 0);
+  const monthlyTarget = (metric: string) => kpis.find((kpi) => kpi.name === metric && kpi.period === "Monthly");
   const targetStatus = (metric: string): Status => {
     const target = monthlyTarget(metric);
-    return !target || target.target === 0 ? "attention" : target.status === "Outstanding" ? "critical" : target.status === "On track" ? "healthy" : "attention";
+    return !target || target.target === 0 ? "attention" : target.status === "Critical" ? "critical" : target.status === "Healthy" ? "healthy" : "attention";
   };
   const metrics: Metric[] = [
     { label: "Recorded revenue", value: formatZAR(financials.revenue), change: financials.revenue ? "recorded" : "not recorded", helper: "from the finance ledger", status: financials.revenue ? "healthy" : "attention", icon: WalletCards },

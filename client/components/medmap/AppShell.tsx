@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
+  BarChart3,
   Bell,
   Boxes,
   BriefcaseBusiness,
@@ -12,6 +13,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   Menu,
+  Network,
   Search,
   Settings2,
   ShieldCheck,
@@ -25,13 +27,20 @@ import { useMedMap } from "@/lib/medmap-store";
 
 const navItems = [
   { label: "Command centre", section: "overview", icon: LayoutDashboard },
+  { label: "Organisation", section: "organization", icon: Network, path: "/organization" },
+  { label: "Company KPIs", section: "kpis", icon: BarChart3, path: "/kpis" },
   { label: "Operations", section: "operations", icon: Activity, path: "/operations" },
-  { label: "Commercial", section: "commercial", icon: BriefcaseBusiness },
+  { label: "Doctor Acquisition", section: "doctor-acquisition", icon: Stethoscope, path: "/doctor-acquisition" },
+  { label: "Ambassador Programme", section: "ambassadors", icon: Users, path: "/ambassadors" },
+  { label: "Sales", section: "sales", icon: BriefcaseBusiness, path: "/sales" },
+  { label: "Customer Operations", section: "customer-operations", icon: LifeBuoy, path: "/customer-operations" },
   { label: "People & goals", section: "people", icon: Users, path: "/people" },
   { label: "Meetings & deadlines", section: "meetings", icon: CalendarDays, path: "/meetings" },
   { label: "Financial health", section: "finance", icon: Gauge, path: "/finance" },
-  { label: "Technology", section: "technology", icon: Zap },
-  { label: "Risk & governance", section: "governance", icon: ShieldCheck },
+  { label: "Technology", section: "technology", icon: Zap, path: "/technology" },
+  { label: "Risk & governance", section: "governance", icon: ShieldCheck, path: "/risk" },
+  { label: "Reports", section: "reports", icon: FileText, path: "/reports" },
+  { label: "Administration", section: "admin", icon: Settings2, path: "/admin" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -41,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [query, setQuery] = useState("");
   const { technologyWorkItems } = useMedMap();
   const outstandingTechnology = technologyWorkItems.filter((item) => item.status !== "Done");
-  const pageTitle = location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : location.pathname === "/meetings" ? "Meetings & deadlines" : "Command centre";
+  const pageTitle = location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : location.pathname === "/meetings" ? "Meetings & deadlines" : location.pathname === "/kpis" ? "Company KPIs" : location.pathname === "/organization" ? "Organisation" : location.pathname === "/doctor-acquisition" ? "Doctor Acquisition" : location.pathname === "/ambassadors" ? "Ambassador Programme" : location.pathname === "/sales" ? "Sales" : location.pathname === "/customer-operations" ? "Customer Operations" : location.pathname === "/technology" ? "Technology" : location.pathname === "/risk" ? "Risk & governance" : location.pathname === "/reports" ? "Reports" : location.pathname === "/admin" ? "Administration" : "Command centre";
 
   const jumpToSection = (section: string) => {
     setMobileOpen(false);

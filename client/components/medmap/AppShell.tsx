@@ -28,8 +28,6 @@ import { useCurrentEmployee } from "@/lib/supabase-identity";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 import {
   isResolvedStatus,
-  recordStatus,
-  rowsFor,
   useExecutiveAlerts,
 } from "@/lib/executive-dashboard";
 
@@ -109,8 +107,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { employee } = useCurrentEmployee();
   const { signOut } = useSupabaseAuth();
   const alerts = useExecutiveAlerts();
-  const liveAlertRows = rowsFor(alerts.data, "company_alerts").filter(
-    (record) => !isResolvedStatus(recordStatus(record)),
+  const liveAlertRows = (alerts.data ?? []).filter(
+    (alert) => !isResolvedStatus(alert.status),
   );
   const employeeName = employee
     ? `${employee.first_name} ${employee.last_name}`.trim()

@@ -11,10 +11,8 @@ import {
   Plus,
   Sparkles,
   Target,
-  UserRound,
   UsersRound,
   WalletCards,
-  Wrench,
 } from "lucide-react";
 import { AppShell } from "@/components/medmap/AppShell";
 import { cn } from "@/lib/utils";
@@ -22,10 +20,8 @@ import { useCurrentOrganisation } from "@/lib/supabase-identity";
 import {
   buildFinanceSummary,
   buildKpiRows,
-  formatExpensePaidTypes,
   formatMoneyBuckets,
   isOverdueDate,
-  isOverdueTimestamp,
   isResolvedStatus,
   normaliseStatus,
   statusToDisplay,
@@ -135,23 +131,11 @@ function MetricCard({ metric }: { metric: Metric }) {
   );
 }
 
-function StethoscopeIcon(props: React.ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M6 3v5a6 6 0 0 0 12 0V3" />
-      <path d="M3 3h6M15 3h6" />
-      <path d="M18 14a3 3 0 1 0 3 3v-1" />
-      <path d="M18 17v3a2 2 0 0 1-2 2h-3" />
-    </svg>
-  );
+function formatOrganisationName(organization: Record<string, unknown> | null) {
+  const name = organization?.name;
+  return typeof name === "string" && name.trim()
+    ? name
+    : "Authenticated organisation";
 }
 
 function formatLiveDate(value: string | null) {
@@ -211,172 +195,146 @@ function RecordState({
   return <>{children}</>;
 }
 
-function ActiveCount({
-  records,
-  label,
-}: {
-  records: BackendRecord[];
-  label: string;
-}) {
-  const result = countActiveRecords(records);
-  if (!result.supported)
-    return {
-      value: "Awaiting live data",
-      change: "status not provided",
-      status: "attention" as Status,
-      helper: `${label} · active status not available`,
-    };
-  return {
-    value: String(result.value),
-    change: result.value ? "active records" : "none recorded",
-    status: result.value ? ("healthy" as Status) : ("attention" as Status),
-    helper: `${label} · live backend records`,
-  };
-}
-
-function WorkSummary({
-  records,
-  label,
-}: {
-  records: BackendRecord[];
-  label: string;
-}) {
-  const withStatus = records.map((record) => ({
-    record,
-    status: recordStatus(record),
-  }));
-  const hasUnsupportedStatus = records.some((item) => !item.status);
-  const open = withStatus.filter(
-    ({ status }) => isOpenStatus(status) === true,
+function WorkSummary({ records }: { records: WorkRecord[] }) {
+  const open = records.filter(
+    (record) => !isResolvedStatus(record.status),
   ).length;
-  const inProgress = withStatus.filter(({ status }) =>
+  const inProgress = records.filter((record) =>
     ["in progress", "assigned", "started"].includes(
-      normaliseStatus(status) ?? "",
+      normaliseStatus(record.status) ?? "",
     ),
   ).length;
-  const completed = withStatus.filter(({ status }) =>
-    isResolvedStatus(status),
+  const completed = records.filter((record) =>
+    isResolvedStatus(record.status),
   ).length;
-  const overdue = records.filter((record) => isOverdue(record)).length;
-  return {
-    label,
-    supported: !hasUnsupportedStatus,
-    open,
-    inProgress,
-    completed,
-    overdue,
-  };
+  const overdue = records.filter((record) =>
+    isOverdueDate(record.due_date, record.status),
+  ).length;
+  return { open, inProgress, completed, overdue };
 }
 
 export default function Index() {
   const organisationState = useCurrentOrganisation();
-  const { people, operations, kpis, finance, coverage } = useExecutiveSummary();
+  const { people, operations, kpis, finance } = useExecutiveSummary();
   const alerts = useExecutiveAlerts();
-  const organisationName =
-    readRecordString(organisationState.organization ?? {}, [
-      "name",
-      "legal_name",
-      "organization_name",
-    ]) ?? "Authenticated organisation";
-
-  const employeeRows = rowsFor(people.data, "employees");
-  const departmentRows = rowsFor(people.data, "departments");
-  const activeDoctors = ActiveCount({
-    records: rowsFor(coverage.data, "doctor_acquisition"),
-    label: "Doctor acquisition",
-  });
-  const activeAmbassadors = ActiveCount({
-    records: rowsFor(coverage.data, "ambassadors"),
-    label: "Ambassador programme",
-  });
-  const financeSummary = buildFinanceSummary(finance.data);
-  const kpiRows = buildKpiRows(kpis.data);
-  const kpiResults = kpiRows.filter((row) => row.actual !== null);
-  const deadlineRows = rowsFor(operations.data, "deadlines")
-    .filter((record) => !isResolvedStatus(recordStatus(record)))
-    .sort((a, b) => (recordDate(a) ?? "").localeCompare(recordDate(b) ?? ""));
-  const taskRows = rowsFor(operations.data, "tasks");
-  const ticketRows = rowsFor(operations.data, "tickets");
-  const workRows = [...taskRows, ...ticketRows];
-  const workSummary = WorkSummary({
-    records: workRows,
-    label: "Tasks and tickets",
-  });
-  const alertRows = rowsFor(alerts.data, "company_alerts").filter(
-    (record) => !isResolvedStatus(recordStatus(record)),
+  const organisationName = formatOrganisationName(
+    organisationState.organization,
   );
-  const coverageCards = [
-    ["Operations", taskRows.length + ticketRows.length + deadlineRows.length],
-    ["Doctor Acquisition", rowsFor(coverage.data, "doctor_acquisition").length],
-    ["Ambassadors", rowsFor(coverage.data, "ambassadors").length],
-    ["Sales", rowsFor(coverage.data, "sales_leads").length],
-    ["Customer Operations", rowsFor(coverage.data, "customer_cases").length],
-    ["Product", 0],
-    ["Engineering", rowsFor(coverage.data, "engineering_projects").length],
-    [
-      "Technology / Security",
-      rowsFor(coverage.data, "security_findings").length +
-        rowsFor(coverage.data, "security_incidents").length +
-        rowsFor(coverage.data, "security_remediations").length,
-    ],
-    ["Finance", financeSummary.revenueRecords + financeSummary.expenseRecords],
-    ["Governance / Risk", rowsFor(coverage.data, "risks").length],
-  ] as const;
-
-  const openWorkValue = workSummary.supported
-    ? String(workSummary.open)
-    : "Awaiting live data";
+  const employeeRows = people.data?.employees ?? [];
+  const departmentRows = people.data?.departments ?? [];
+  const employeeNames = new Map(
+    employeeRows.map((employee) => [
+      employee.id,
+      `${employee.first_name} ${employee.last_name}`.trim(),
+    ]),
+  );
+  const financeSummary = buildFinanceSummary(finance.data);
+  const { rows: kpiRows, period: kpiPeriod } = buildKpiRows(kpis.data);
+  const kpiResults = kpiRows.filter((row) => row.actual !== null);
+  const deadlineRows = (operations.data?.deadlines ?? [])
+    .filter((deadline) => !isResolvedStatus(deadline.status))
+    .sort((a, b) => a.due_at.localeCompare(b.due_at));
+  const taskRows = operations.data?.tasks ?? [];
+  const ticketRows = operations.data?.tickets ?? [];
+  const workRows: WorkRecord[] = [...taskRows, ...ticketRows];
+  const workSummary = WorkSummary({ records: workRows });
+  const alertRows = (alerts.data ?? []).filter(
+    (alert) => !isResolvedStatus(alert.status),
+  );
+  const activeEmployeeCount = employeeRows.filter(
+    (employee) => normaliseStatus(employee.employee_status) === "active",
+  ).length;
+  const openWorkValue = operations.isPending
+    ? "Loading..."
+    : operations.isError
+      ? "Unavailable"
+      : String(workSummary.open);
   const metrics: Metric[] = [
     {
       label: "Recorded revenue",
-      value: financeSummary.revenueRecords
-        ? formatZAR(financeSummary.revenue ?? 0)
+      value: financeSummary.recognizedRevenueRecords
+        ? formatMoneyBuckets(financeSummary.revenue)
         : "Awaiting live data",
-      change: financeSummary.revenueRecords ? "recorded" : "no records",
-      helper: financeSummary.periodLabel
-        ? `Finance · ${financeSummary.periodLabel}`
+      change: financeSummary.recognizedRevenueRecords
+        ? "recorded"
+        : "no records",
+      helper: financeSummary.periodName
+        ? `Finance · ${financeSummary.periodName}`
         : "Finance · current backend records",
-      status: financeSummary.revenueRecords ? "healthy" : "attention",
+      status: financeSummary.recognizedRevenueRecords ? "healthy" : "attention",
       icon: WalletCards,
     },
     {
-      label: "Active doctors",
-      value: activeDoctors.value,
-      change: activeDoctors.change,
-      helper: activeDoctors.helper,
-      status: activeDoctors.status,
-      icon: StethoscopeIcon,
-    },
-    {
-      label: "Active ambassadors",
-      value: activeAmbassadors.value,
-      change: activeAmbassadors.change,
-      helper: activeAmbassadors.helper,
-      status: activeAmbassadors.status,
-      icon: UserRound,
-    },
-    {
-      label: "Active patients",
-      value: "Awaiting live data",
-      change: "source not connected",
-      helper: "No patient table is part of the verified Phase 3A source list",
-      status: "attention",
+      label: "Active employees",
+      value: people.isPending
+        ? "Loading..."
+        : people.isError
+          ? "Unavailable"
+          : employeeRows.length
+            ? String(activeEmployeeCount)
+            : "Awaiting live data",
+      change: people.isError ? "data unavailable" : "live records",
+      helper: "Employees · authenticated organisation scope",
+      status: people.isError
+        ? "critical"
+        : activeEmployeeCount
+          ? "healthy"
+          : "attention",
       icon: UsersRound,
     },
     {
+      label: "Departments",
+      value: people.isPending
+        ? "Loading..."
+        : people.isError
+          ? "Unavailable"
+          : departmentRows.length
+            ? String(departmentRows.length)
+            : "Awaiting live data",
+      change: people.isError ? "data unavailable" : "live records",
+      helper: "Departments · authenticated organisation scope",
+      status: people.isError
+        ? "critical"
+        : departmentRows.length
+          ? "healthy"
+          : "attention",
+      icon: Target,
+    },
+    {
       label: "Open work",
-      value: openWorkValue,
-      change: workSummary.supported
-        ? `${workSummary.overdue} overdue`
-        : "status not provided",
+      value: workRows.length ? openWorkValue : "Awaiting live data",
+      change: operations.isError
+        ? "data unavailable"
+        : workRows.length
+          ? `${workSummary.overdue} overdue`
+          : "no records",
       helper: "Tasks and tickets · live backend records",
-      status:
-        workSummary.supported && workSummary.overdue
+      status: operations.isError
+        ? "critical"
+        : workSummary.overdue
           ? "critical"
-          : workSummary.supported
-            ? "attention"
-            : "attention",
+          : "attention",
       icon: Layers3,
+    },
+    {
+      label: "KPI actuals",
+      value: kpis.isPending
+        ? "Loading..."
+        : kpis.isError
+          ? "Unavailable"
+          : kpiResults.length
+            ? String(kpiResults.length)
+            : "Awaiting live data",
+      change: kpis.isError ? "data unavailable" : "current period records",
+      helper: kpiPeriod?.period_name
+        ? `KPIs · ${kpiPeriod.period_name}`
+        : "KPIs · current period records",
+      status: kpis.isError
+        ? "critical"
+        : kpiResults.length
+          ? "healthy"
+          : "attention",
+      icon: Clock3,
     },
   ];
 
@@ -471,18 +429,9 @@ export default function Index() {
                   ? "Loading..."
                   : people.isError
                     ? "Unavailable"
-                    : String(
-                        employeeRows.filter(
-                          (employee) =>
-                            normaliseStatus(
-                              readRecordString(employee, [
-                                "employee_status",
-                                "status",
-                                "state",
-                              ]),
-                            ) === "active",
-                        ).length,
-                      )}
+                    : employeeRows.length
+                      ? String(activeEmployeeCount)
+                      : "Awaiting live data"}
               </p>
               <p className="mt-2 text-[11px] leading-5 text-slate-500">
                 Derived from employee status values returned by the backend.
@@ -509,82 +458,7 @@ export default function Index() {
           </div>
         </section>
 
-        <section
-          id="governance"
-          className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]"
-        >
-          <article
-            id="technology"
-            className="scroll-mt-24 rounded-2xl border border-[#f0cdca] bg-[#fff8f7] p-5 shadow-[0_5px_20px_rgba(21,36,58,0.035)] sm:p-6"
-          >
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="grid size-8 place-items-center rounded-lg bg-[#ffe5e3] text-[#bd504d]">
-                    <Wrench size={16} />
-                  </span>
-                  <h2 className="font-display text-[16px] font-bold text-[#152239]">
-                    Technology and security coverage
-                  </h2>
-                </div>
-                <p className="mt-2 text-[11px] text-slate-500">
-                  Only engineering and security records returned by the backend
-                  are shown.
-                </p>
-              </div>
-              <Link
-                to="/technology"
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#bd504d]"
-              >
-                Open technology module <ChevronRight size={14} />
-              </Link>
-            </div>
-            <div className="mt-4 grid gap-2 md:grid-cols-2">
-              <RecordState
-                pending={coverage.isPending}
-                error={coverage.isError}
-                empty={
-                  !coverage.isPending &&
-                  !coverage.isError &&
-                  coverageCards
-                    .filter(
-                      ([label]) =>
-                        label === "Engineering" ||
-                        label === "Technology / Security",
-                    )
-                    .every(([, count]) => count === 0)
-                }
-              >
-                {coverageCards
-                  .filter(
-                    ([label]) =>
-                      label === "Engineering" ||
-                      label === "Technology / Security",
-                  )
-                  .map(([label, count]) => (
-                    <div key={label} className="rounded-xl bg-white p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[11px] font-bold text-slate-700">
-                            {label}
-                          </p>
-                          <p className="mt-1 text-[10px] leading-5 text-slate-400">
-                            {count
-                              ? `${count} live record${count === 1 ? "" : "s"} visible`
-                              : "Awaiting live data"}
-                          </p>
-                        </div>
-                        <StatusPill
-                          status={count ? "attention" : "attention"}
-                          label={count ? "Live records" : "Awaiting data"}
-                        />
-                      </div>
-                    </div>
-                  ))}
-              </RecordState>
-            </div>
-          </article>
-
+        <section id="governance" className="mt-5">
           <article className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_5px_20px_rgba(21,36,58,0.035)] sm:p-6">
             <div className="flex items-start justify-between">
               <div>
@@ -616,28 +490,22 @@ export default function Index() {
                   !alerts.isPending && !alerts.isError && !alertRows.length
                 }
               >
-                {alertRows.slice(0, 4).map((alert, index) => (
+                {alertRows.slice(0, 4).map((alert) => (
                   <div
-                    key={recordId(alert) ?? `alert-${index}`}
+                    key={alert.id}
                     className="rounded-xl border border-slate-100 bg-[#f8fafc] p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-[11px] font-bold text-slate-700">
-                        {recordTitle(alert, "Company alert")}
+                        {alert.title || "Company alert"}
                       </p>
                       <StatusPill
-                        status={
-                          statusToDisplay(recordStatus(alert)) ?? "attention"
-                        }
-                        label={recordStatus(alert) ?? "Alert"}
+                        status={statusToDisplay(alert.status) ?? "attention"}
+                        label={alert.status || "Alert"}
                       />
                     </div>
                     <p className="mt-1 text-[10px] leading-5 text-slate-400">
-                      {readRecordString(alert, [
-                        "message",
-                        "description",
-                        "details",
-                      ]) ?? "No alert detail provided."}
+                      {alert.message || "No alert detail provided."}
                     </p>
                   </div>
                 ))}
@@ -668,9 +536,7 @@ export default function Index() {
                   ? "..."
                   : operations.isError
                     ? "!"
-                    : workSummary.supported
-                      ? `${workSummary.open} open`
-                      : "Status unavailable"}
+                    : `${workSummary.open} open`}
               </span>
             </div>
             <RecordState
@@ -689,14 +555,10 @@ export default function Index() {
                     Tasks and tickets
                   </p>
                   <p className="mt-2 font-display text-[22px] font-bold text-[#152239]">
-                    {workSummary.supported
-                      ? workSummary.open
-                      : "Awaiting live data"}
+                    {workSummary.open}
                   </p>
                   <p className="mt-1 text-[10px] text-slate-400">
-                    {workSummary.supported
-                      ? `${workSummary.inProgress} in progress · ${workSummary.completed} completed · ${workSummary.overdue} overdue`
-                      : "Status fields are not available on all returned records."}
+                    {`${workSummary.inProgress} in progress · ${workSummary.completed} completed · ${workSummary.overdue} overdue`}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#f7f9fb] p-3.5">
@@ -714,9 +576,9 @@ export default function Index() {
                 </div>
               </div>
               <div className="mt-4 space-y-2">
-                {deadlineRows.slice(0, 4).map((deadline, index) => (
+                {deadlineRows.slice(0, 4).map((deadline) => (
                   <div
-                    key={recordId(deadline) ?? `deadline-${index}`}
+                    key={deadline.id}
                     className="flex items-center gap-3 rounded-xl border border-slate-100 p-3"
                   >
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#eef4fb] text-[#5488be]">
@@ -724,17 +586,18 @@ export default function Index() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[11px] font-bold text-slate-700">
-                        {recordTitle(deadline, "Deadline")}
+                        {deadline.title || "Deadline"}
                       </p>
                       <p className="mt-1 text-[10px] text-slate-400">
-                        {formatLiveDate(recordDate(deadline))}
-                        {recordOwner(deadline)
-                          ? ` · ${recordOwner(deadline)}`
+                        {formatLiveDate(deadline.due_at)}
+                        {deadline.owner_employee_id &&
+                        employeeNames.get(deadline.owner_employee_id)
+                          ? ` · ${employeeNames.get(deadline.owner_employee_id)}`
                           : ""}
                       </p>
                     </div>
                     <span className="text-[10px] font-semibold text-slate-500">
-                      {recordStatus(deadline) ?? "Status not provided"}
+                      {deadline.status || "Status not provided"}
                     </span>
                   </div>
                 ))}
@@ -768,7 +631,7 @@ export default function Index() {
             <RecordState
               pending={kpis.isPending}
               error={kpis.isError}
-              empty={!kpis.isPending && !kpis.isError && !kpiRows.length}
+              empty={!kpis.isPending && !kpis.isError && !kpiResults.length}
             >
               {kpiResults.length ? (
                 <div className="mt-4 space-y-2">
@@ -789,14 +652,17 @@ export default function Index() {
                               {kpi.name}
                             </p>
                             <p className="mt-1 text-[10px] text-slate-400">
-                              {kpi.period ?? "Period not provided"}
-                              {kpi.owner ? ` · ${kpi.owner}` : ""}
+                              {kpi.periodName ?? "Period not provided"}
+                              {kpi.ownerEmployeeId &&
+                              employeeNames.get(kpi.ownerEmployeeId)
+                                ? ` · ${employeeNames.get(kpi.ownerEmployeeId)}`
+                                : ""}
                             </p>
                           </div>
                           {displayStatus ? (
                             <StatusPill
                               status={displayStatus}
-                              label={kpi.status ?? undefined}
+                              label={kpi.status || undefined}
                             />
                           ) : (
                             <span className="text-[10px] text-slate-400">
@@ -864,7 +730,7 @@ export default function Index() {
             empty={
               !finance.isPending &&
               !finance.isError &&
-              !financeSummary.revenueRecords &&
+              !financeSummary.recognizedRevenueRecords &&
               !financeSummary.expenseRecords
             }
           >
@@ -872,8 +738,8 @@ export default function Index() {
               <FinanceValue
                 label="Recorded revenue"
                 value={
-                  financeSummary.revenueRecords
-                    ? formatZAR(financeSummary.revenue ?? 0)
+                  financeSummary.recognizedRevenueRecords
+                    ? formatMoneyBuckets(financeSummary.revenue)
                     : "Awaiting live data"
                 }
               />
@@ -881,7 +747,7 @@ export default function Index() {
                 label="Company expenses"
                 value={
                   financeSummary.expenseRecords
-                    ? formatZAR(financeSummary.expenses ?? 0)
+                    ? formatMoneyBuckets(financeSummary.expenses)
                     : "Awaiting live data"
                 }
                 tone="negative"
@@ -889,54 +755,15 @@ export default function Index() {
               <FinanceValue
                 label="Operating position"
                 value={
-                  financeSummary.revenueRecords &&
-                  financeSummary.expenseRecords &&
-                  financeSummary.netPosition !== null
-                    ? formatZARWithSign(financeSummary.netPosition)
+                  financeSummary.recognizedRevenueRecords ||
+                  financeSummary.expenseRecords
+                    ? formatMoneyBuckets(financeSummary.netPosition)
                     : "Awaiting live data"
                 }
                 tone="negative"
               />
             </div>
           </RecordState>
-        </section>
-
-        <section className="mt-5 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_5px_20px_rgba(21,36,58,0.035)] sm:p-6">
-          <div className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-lg bg-[#eef4fb] text-[#5488be]">
-              <Layers3 size={16} />
-            </span>
-            <h2 className="font-display text-[16px] font-bold text-[#152239]">
-              Cross-department coverage
-            </h2>
-          </div>
-          <p className="mt-2 text-[11px] text-slate-400">
-            A concise view of verified backend records by operating area. It is
-            not a replacement for each module’s workflow.
-          </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            {coverageCards.map(([label, count]) => (
-              <div key={label} className="rounded-xl bg-[#f7f9fb] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
-                  {label}
-                </p>
-                <p className="mt-2 font-display text-[20px] font-bold text-[#152239]">
-                  {coverage.isPending ||
-                  (label === "Operations" && operations.isPending)
-                    ? "..."
-                    : coverage.isError ||
-                        (label === "Operations" && operations.isError)
-                      ? "Unavailable"
-                      : count
-                        ? count
-                        : "Awaiting live data"}
-                </p>
-                <p className="mt-1 text-[10px] text-slate-400">
-                  {count ? "Live records visible" : "No verified records"}
-                </p>
-              </div>
-            ))}
-          </div>
         </section>
 
         <footer className="mt-8 flex flex-col justify-between gap-2 border-t border-slate-200/70 pt-5 text-[10px] text-slate-400 sm:flex-row">

@@ -25,6 +25,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useMedMap } from "@/lib/medmap-store";
 import { SupabaseConnectionDiagnostic } from "@/components/medmap/SupabaseConnectionDiagnostic";
+import { useCurrentEmployee } from "@/lib/supabase-identity";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 const navItems = [
   { label: "Command centre", section: "overview", icon: LayoutDashboard },
@@ -50,7 +52,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
   const { technologyWorkItems } = useMedMap();
+  const { employee } = useCurrentEmployee();
+  const { signOut } = useSupabaseAuth();
   const outstandingTechnology = technologyWorkItems.filter((item) => item.status !== "Done");
+  const employeeName = employee ? `${employee.first_name} ${employee.last_name}`.trim() : "Employee";
+  const employeeInitials = employee ? `${employee.first_name[0] ?? ""}${employee.last_name[0] ?? ""}`.toUpperCase() : "MM";
+  const employeeTitle = employee?.job_title ?? "MedMap Operations";
   const pageTitle = location.pathname === "/finance" ? "Financial health" : location.pathname === "/people" ? "People & goals" : location.pathname === "/operations" ? "Operations" : location.pathname === "/meetings" ? "Meetings & deadlines" : location.pathname === "/kpis" ? "Company KPIs" : location.pathname === "/organization" ? "Organisation" : location.pathname === "/doctor-acquisition" ? "Doctor Acquisition" : location.pathname === "/ambassadors" ? "Ambassador Programme" : location.pathname === "/sales" ? "Sales" : location.pathname === "/customer-operations" ? "Customer Operations" : location.pathname === "/technology" ? "Technology" : location.pathname === "/risk" ? "Risk & governance" : location.pathname === "/reports" ? "Reports" : location.pathname === "/admin" ? "Administration" : "Command centre";
 
   const jumpToSection = (section: string) => {
@@ -145,9 +152,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search anything" className="h-9 w-48 rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-[12px] outline-none transition placeholder:text-slate-400 focus:border-[#84cbb8] focus:ring-4 focus:ring-[#84e0c3]/15" />
             </label>
             <button className="relative rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-800" aria-label="Notifications"><Bell size={17} /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-[#ea8c61] ring-2 ring-white" /></button>
-            <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white py-1.5 pl-1.5 pr-2.5 shadow-sm transition hover:border-slate-300">
-              <span className="grid size-7 place-items-center rounded-lg bg-[#d7f4ea] text-[11px] font-bold text-[#13795e]">OM</span>
-              <span className="hidden text-left sm:block"><span className="block text-[11px] font-bold text-slate-700">Ofentse</span><span className="block text-[10px] text-slate-400">CEO</span></span>
+            <button onClick={() => void signOut()} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white py-1.5 pl-1.5 pr-2.5 shadow-sm transition hover:border-slate-300" title="Sign out">
+              <span className="grid size-7 place-items-center rounded-lg bg-[#d7f4ea] text-[11px] font-bold text-[#13795e]">{employeeInitials}</span>
+              <span className="hidden max-w-[130px] text-left sm:block"><span className="block truncate text-[11px] font-bold text-slate-700">{employeeName}</span><span className="block truncate text-[10px] text-slate-400">{employeeTitle}</span></span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
           </div>

@@ -3,6 +3,7 @@ import "./global.css";
 import { Toaster } from "@/components/ui/toaster";
 import { MedMapProvider } from "@/lib/medmap-store";
 import { SupabaseAuthProvider } from "@/lib/supabase-auth";
+import { AuthGate } from "@/components/medmap/AuthGate";
 import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,10 +25,11 @@ const App = () => (
     <TooltipProvider>
       <SupabaseAuthProvider>
         <MedMapProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-          <Routes>
+          <AuthGate>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+            <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/finance" element={<Finance />} />
             <Route path="/people" element={<People />} />
@@ -45,8 +47,9 @@ const App = () => (
             <Route path="/admin" element={<ModulePage module="admin" />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-          </BrowserRouter>
+            </Routes>
+            </BrowserRouter>
+          </AuthGate>
         </MedMapProvider>
       </SupabaseAuthProvider>
     </TooltipProvider>

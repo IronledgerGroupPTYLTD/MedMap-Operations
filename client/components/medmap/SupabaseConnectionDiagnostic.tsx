@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, CircleAlert, Loader2, RefreshCw } from "lucide-react";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
+import { useCurrentEmployee, useCurrentOrganisation } from "@/lib/supabase-identity";
 import { getSupabaseHealth, supabaseConfigured, type SupabaseHealth } from "@/lib/supabase";
 
 function DiagnosticStatus({ ok, pending }: { ok: boolean; pending?: boolean }) {
@@ -10,6 +11,8 @@ function DiagnosticStatus({ ok, pending }: { ok: boolean; pending?: boolean }) {
 
 export function SupabaseConnectionDiagnostic() {
   const { session, loading: authLoading, error: authError } = useSupabaseAuth();
+  const employeeState = useCurrentEmployee();
+  const organizationState = useCurrentOrganisation();
   const [health, setHealth] = useState<SupabaseHealth | null>(null);
   const [checking, setChecking] = useState(false);
 
@@ -27,7 +30,7 @@ export function SupabaseConnectionDiagnostic() {
 
   const backendConnected = health?.backendQuery === "connected";
   const authReady = !authLoading;
-  const authErrorMessage = authError?.message ?? health?.error;
+  const authErrorMessage = authError ? "Authentication could not be verified." : employeeState.error || organizationState.error ? "Identity data could not be loaded." : health?.error;
 
   return (
     <section className="mt-5 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_5px_20px_rgba(21,36,58,0.035)] sm:p-6">
@@ -51,6 +54,12 @@ export function SupabaseConnectionDiagnostic() {
         <DiagnosticRow label="SUPABASE CONFIGURED" value={supabaseConfigured ? "Configured" : "Missing configuration"} ok={supabaseConfigured} pending={checking && !health} />
         <DiagnosticRow label="SUPABASE CLIENT INITIALIZED" value={health?.clientInitialized ? "Initialized" : "Not initialized"} ok={health?.clientInitialized === true} pending={checking && !health} />
         <DiagnosticRow label="AUTH SESSION" value={authLoading ? "Checking session" : session ? "Active session" : "No active session"} ok={authReady} pending={authLoading} />
+        <DiagnosticRow label="EMPLOYEE RESOLVED" value={employeeState.isLoading ? "Resolving employee" : employeeState.employee ? "Resolved" : employeeState.isUnauthenticated ? "Authentication required" : "No active employee"} ok={Boolean(employeeState.employee)} pending={employeeState.isLoading} />
+        <DiagnosticRow label="ORGANISATION RESOLVED" value={organizationState.isLoading ? "Resolving organisation" : organizationState.organizationId ? "Resolved" : organizationState.isUnauthenticated ? "Authentication required" : "No organisation"} ok={Boolean(organizationState.organizationId)} pending={organizationState.isLoading} />
+        <DiagnosticRow label="DEPARTMENT RESOLVED" value={employeeState.departmentResolved ? "Resolved" : employeeState.isLoading ? "Resolving department" : "Not resolved"} ok={employeeState.departmentResolved} pending={employeeState.isLoading} />
+        <DiagnosticRow label="ROLE RESOLVED" value={employeeState.roleResolved ? "Resolved" : employeeState.isLoading ? "Resolving role" : "Not resolved"} ok={employeeState.roleResolved} pending={employeeState.isLoading} />
+        <DiagnosticRow label="PERMISSIONS RESOLVED" value={employeeState.permissionsLoading ? "Resolving permissions" : employeeState.permissionsResolved ? "Resolved" : "Not resolved"} ok={employeeState.permissionsResolved} pending={employeeState.permissionsLoading} />
+        <DiagnosticRow label="RLS QUERY SUCCESSFUL" value={employeeState.rlsQuerySuccessful ? "Employee query succeeded" : employeeState.isLoading ? "Checking employee query" : "Not verified"} ok={employeeState.rlsQuerySuccessful} pending={employeeState.isLoading} />
         <DiagnosticRow label="BACKEND QUERY CONNECTIVITY" value={health ? backendConnected ? "Connected" : "Unavailable" : "Checking endpoint"} ok={backendConnected} pending={checking && !health} />
       </div>
       {authErrorMessage && <p className="mt-3 rounded-xl bg-[#fff8f7] px-3 py-2 text-[11px] leading-5 text-[#bd504d]">{authErrorMessage}</p>}

@@ -1,84 +1,576 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCurrentOrganisation } from "./supabase-identity";
-import { useSupabaseAuth } from "./supabase-auth";
 import { getSupabaseClient } from "./supabase";
+import { useSupabaseAuth } from "./supabase-auth";
+import { useCurrentOrganisation } from "./supabase-identity";
 
-export type BackendRecord = Record<string, unknown>;
+export type CompanyAlert = {
+  id: string;
+  organization_id: string;
+  alert_type: string;
+  title: string;
+  message: string;
+  severity: string;
+  source_type: string | null;
+  source_id: string | null;
+  status: string;
+  starts_at: string;
+  expires_at: string | null;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
-export const executiveTables = {
-  employees: "employees",
-  departments: "departments",
-  companyAlerts: "company_alerts",
-  deadlines: "deadlines",
-  tasks: "tasks",
-  tickets: "tickets",
-  kpis: "kpis",
-  kpiPeriods: "kpi_periods",
-  kpiTargets: "kpi_targets",
-  kpiResults: "kpi_results",
-  revenue: "revenue",
-  expenses: "expenses",
-  financialPeriods: "financial_periods",
-  doctorAcquisition: "doctor_acquisition",
-  ambassadors: "ambassadors",
-  salesLeads: "sales_leads",
-  customerCases: "customer_cases",
-  engineeringProjects: "engineering_projects",
-  securityFindings: "security_findings",
-  securityIncidents: "security_incidents",
-  securityRemediations: "security_remediations",
-  risks: "risks",
-} as const;
+export type Deadline = {
+  id: string;
+  organization_id: string | null;
+  department_id: string | null;
+  owner_employee_id: string | null;
+  title: string;
+  description: string | null;
+  due_at: string;
+  priority: string;
+  status: string;
+  linked_task_id: string | null;
+  linked_ticket_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
-type ExecutiveTable = (typeof executiveTables)[keyof typeof executiveTables];
-export type ExecutiveGroupData = Partial<
-  Record<ExecutiveTable, BackendRecord[]>
->;
+export type DepartmentContext = {
+  id: string;
+  organization_id: string | null;
+  code: string;
+  name: string;
+  description: string | null;
+  department_group: string;
+  active: boolean;
+};
 
-type ExecutiveQueryState = {
-  data?: ExecutiveGroupData;
+export type EmployeeContext = {
+  id: string;
+  organization_id: string | null;
+  first_name: string;
+  last_name: string;
+  job_title: string | null;
+  department_id: string | null;
+  employee_status: string;
+};
+
+export type KpiPeriod = {
+  id: string;
+  organization_id: string | null;
+  period_type: string;
+  period_name: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+};
+
+export type Kpi = {
+  id: string;
+  organization_id: string | null;
+  department_id: string | null;
+  owner_employee_id: string | null;
+  name: string;
+  code: string;
+  description: string | null;
+  category: string | null;
+  measurement_type: string;
+  direction: string;
+  unit: string | null;
+  active: boolean;
+};
+
+export type KpiTarget = {
+  id: string;
+  kpi_id: string;
+  employee_id: string | null;
+  department_id: string | null;
+  period_id: string;
+  target_value: number | null;
+  green_threshold: number | null;
+  yellow_threshold: number | null;
+  critical_threshold: number | null;
+  notes: string | null;
+};
+
+export type KpiResult = {
+  id: string;
+  kpi_id: string;
+  target_id: string | null;
+  employee_id: string | null;
+  department_id: string | null;
+  period_id: string;
+  actual_value: number | null;
+  calculated_percentage: number | null;
+  status: string;
+  commentary: string | null;
+};
+
+export type Revenue = {
+  id: string;
+  organization_id: string | null;
+  revenue_date: string;
+  revenue_type: string;
+  source_entity_type: string | null;
+  source_entity_id: string | null;
+  amount: number | null;
+  currency: string;
+  status: string;
+  description: string | null;
+  created_at: string;
+};
+
+export type Expense = {
+  id: string;
+  organization_id: string;
+  financial_period_id: string | null;
+  expense_date: string;
+  description: string;
+  amount: number | null;
+  currency: string;
+  paid_by_type: string;
+  paid_by_employee_id: string | null;
+  reimbursement_status: string;
+  reimbursement_amount: number | null;
+  approval_status: string;
+  is_historical: boolean;
+  requires_review: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FinancialPeriod = {
+  id: string;
+  organization_id: string;
+  period_name: string;
+  period_start: string;
+  period_end: string;
+  status: string;
+  notes: string | null;
+};
+
+export type Task = {
+  id: string;
+  organization_id: string | null;
+  department_id: string | null;
+  assigned_to: string | null;
+  created_by: string | null;
+  kpi_id: string | null;
+  title: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  progress_percentage: number | null;
+  due_date: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Ticket = {
+  id: string;
+  organization_id: string | null;
+  department_id: string | null;
+  reported_by: string | null;
+  assigned_to: string | null;
+  kpi_id: string | null;
+  ticket_number: number | null;
+  title: string;
+  description: string | null;
+  category: string | null;
+  priority: string;
+  status: string;
+  due_date: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PeopleData = {
+  employees: EmployeeContext[];
+  departments: DepartmentContext[];
+};
+
+export type OperationsData = {
+  deadlines: Deadline[];
+  tasks: Task[];
+  tickets: Ticket[];
+};
+
+export type KpiData = {
+  kpis: Kpi[];
+  targets: KpiTarget[];
+  results: KpiResult[];
+  periods: KpiPeriod[];
+};
+
+export type FinanceData = {
+  revenue: Revenue[];
+  expenses: Expense[];
+  periods: FinancialPeriod[];
+};
+
+type RawRow = Readonly<Record<string, unknown>>;
+
+type QueryState<T> = {
+  data: T | undefined;
   isPending: boolean;
   isError: boolean;
   error: Error | null;
 };
 
-async function fetchTables(
-  tables: readonly ExecutiveTable[],
-): Promise<ExecutiveGroupData> {
-  const client = getSupabaseClient();
-  const entries = await Promise.all(
-    tables.map(async (table) => {
-      const { data, error } = await client.from(table).select("*");
-      if (error) throw error;
-      return [table, (data ?? []) as BackendRecord[]] as const;
-    }),
-  );
+const columns = {
+  companyAlerts: "id, organization_id, alert_type, title, message, severity, source_type, source_id, status, starts_at, expires_at, acknowledged_at, resolved_at, created_at, updated_at",
+  deadlines: "id, organization_id, department_id, owner_employee_id, title, description, due_at, priority, status, linked_task_id, linked_ticket_id, created_at, updated_at",
+  departments: "id, organization_id, code, name, description, department_group, active",
+  employees: "id, organization_id, first_name, last_name, job_title, department_id, employee_status",
+  kpiPeriods: "id, organization_id, period_type, period_name, start_date, end_date, status",
+  kpis: "id, organization_id, department_id, owner_employee_id, name, code, description, category, measurement_type, direction, unit, active",
+  kpiTargets: "id, kpi_id, employee_id, department_id, period_id, target_value, green_threshold, yellow_threshold, critical_threshold, notes",
+  kpiResults: "id, kpi_id, target_id, employee_id, department_id, period_id, actual_value, calculated_percentage, status, commentary",
+  revenue: "id, organization_id, revenue_date, revenue_type, source_entity_type, source_entity_id, amount, currency, status, description, created_at",
+  expenses: "id, organization_id, financial_period_id, expense_date, description, amount, currency, paid_by_type, paid_by_employee_id, reimbursement_status, reimbursement_amount, approval_status, is_historical, requires_review, created_at, updated_at",
+  financialPeriods: "id, organization_id, period_name, period_start, period_end, status, notes",
+  tasks: "id, organization_id, department_id, assigned_to, created_by, kpi_id, title, description, priority, status, progress_percentage, due_date, completed_at, created_at, updated_at",
+  tickets: "id, organization_id, department_id, reported_by, assigned_to, kpi_id, ticket_number, title, description, category, priority, status, due_date, resolved_at, created_at, updated_at",
+} as const;
 
-  return Object.fromEntries(entries) as ExecutiveGroupData;
+function isRawRow(value: unknown): value is RawRow {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function useExecutiveGroup(
+function rawRows(value: unknown): RawRow[] {
+  return Array.isArray(value) ? value.filter(isRawRow) : [];
+}
+
+function text(row: RawRow, key: string): string | null {
+  const value = row[key];
+  return typeof value === "string" ? value : null;
+}
+
+function requiredText(row: RawRow, key: string): string {
+  return text(row, key) ?? "";
+}
+
+function numberValue(row: RawRow, key: string): number | null {
+  const value = row[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function booleanValue(row: RawRow, key: string): boolean {
+  return row[key] === true;
+}
+
+function selectRows(
+  table: string,
+  selection: string,
+  organizationId: string,
+): Promise<RawRow[]> {
+  return getSupabaseClient()
+    .from(table)
+    .select(selection)
+    .eq("organization_id", organizationId)
+    .then(({ data, error }) => {
+      if (error) throw error;
+      const responseData: unknown = data;
+      return rawRows(responseData);
+    });
+}
+
+function parseCompanyAlert(row: RawRow): CompanyAlert {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: requiredText(row, "organization_id"),
+    alert_type: requiredText(row, "alert_type"),
+    title: requiredText(row, "title"),
+    message: requiredText(row, "message"),
+    severity: requiredText(row, "severity"),
+    source_type: text(row, "source_type"),
+    source_id: text(row, "source_id"),
+    status: requiredText(row, "status"),
+    starts_at: requiredText(row, "starts_at"),
+    expires_at: text(row, "expires_at"),
+    acknowledged_at: text(row, "acknowledged_at"),
+    resolved_at: text(row, "resolved_at"),
+    created_at: requiredText(row, "created_at"),
+    updated_at: requiredText(row, "updated_at"),
+  };
+}
+
+function parseDeadline(row: RawRow): Deadline {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: text(row, "organization_id"),
+    department_id: text(row, "department_id"),
+    owner_employee_id: text(row, "owner_employee_id"),
+    title: requiredText(row, "title"),
+    description: text(row, "description"),
+    due_at: requiredText(row, "due_at"),
+    priority: requiredText(row, "priority"),
+    status: requiredText(row, "status"),
+    linked_task_id: text(row, "linked_task_id"),
+    linked_ticket_id: text(row, "linked_ticket_id"),
+    created_at: requiredText(row, "created_at"),
+    updated_at: requiredText(row, "updated_at"),
+  };
+}
+
+function parseDepartment(row: RawRow): DepartmentContext {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: text(row, "organization_id"),
+    code: requiredText(row, "code"),
+    name: requiredText(row, "name"),
+    description: text(row, "description"),
+    department_group: requiredText(row, "department_group"),
+    active: booleanValue(row, "active"),
+  };
+}
+
+function parseEmployee(row: RawRow): EmployeeContext {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: text(row, "organization_id"),
+    first_name: requiredText(row, "first_name"),
+    last_name: requiredText(row, "last_name"),
+    job_title: text(row, "job_title"),
+    department_id: text(row, "department_id"),
+    employee_status: requiredText(row, "employee_status"),
+  };
+}
+
+function parseKpiPeriod(row: RawRow): KpiPeriod {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: text(row, "organization_id"),
+    period_type: requiredText(row, "period_type"),
+    period_name: requiredText(row, "period_name"),
+    start_date: requiredText(row, "start_date"),
+    end_date: requiredText(row, "end_date"),
+    status: requiredText(row, "status"),
+  };
+}
+
+function parseKpi(row: RawRow): Kpi {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: text(row, "organization_id"),
+    department_id: text(row, "department_id"),
+    owner_employee_id: text(row, "owner_employee_id"),
+    name: requiredText(row, "name"),
+    code: requiredText(row, "code"),
+    description: text(row, "description"),
+    category: text(row, "category"),
+    measurement_type: requiredText(row, "measurement_type"),
+    direction: requiredText(row, "direction"),
+    unit: text(row, "unit"),
+    active: booleanValue(row, "active"),
+  };
+}
+
+function parseKpiTarget(row: RawRow): KpiTarget {
+  return {
+    id: requiredText(row, "id"),
+    kpi_id: requiredText(row, "kpi_id"),
+    employee_id: text(row, "employee_id"),
+    department_id: text(row, "department_id"),
+    period_id: requiredText(row, "period_id"),
+    target_value: numberValue(row, "target_value"),
+    green_threshold: numberValue(row, "green_threshold"),
+    yellow_threshold: numberValue(row, "yellow_threshold"),
+    critical_threshold: numberValue(row, "critical_threshold"),
+    notes: text(row, "notes"),
+  };
+}
+
+function parseKpiResult(row: RawRow): KpiResult {
+  return {
+    id: requiredText(row, "id"),
+    kpi_id: requiredText(row, "kpi_id"),
+    target_id: text(row, "target_id"),
+    employee_id: text(row, "employee_id"),
+    department_id: text(row, "department_id"),
+    period_id: requiredText(row, "period_id"),
+    actual_value: numberValue(row, "actual_value"),
+    calculated_percentage: numberValue(row, "calculated_percentage"),
+    status: requiredText(row, "status"),
+    commentary: text(row, "commentary"),
+  };
+}
+
+function parseRevenue(row: RawRow): Revenue {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: text(row, "organization_id"),
+    revenue_date: requiredText(row, "revenue_date"),
+    revenue_type: requiredText(row, "revenue_type"),
+    source_entity_type: text(row, "source_entity_type"),
+    source_entity_id: text(row, "source_entity_id"),
+    amount: numberValue(row, "amount"),
+    currency: requiredText(row, "currency").toUpperCase(),
+    status: requiredText(row, "status"),
+    description: text(row, "description"),
+    created_at: requiredText(row, "created_at"),
+  };
+}
+
+function parseExpense(row: RawRow): Expense {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: requiredText(row, "organization_id"),
+    financial_period_id: text(row, "financial_period_id"),
+    expense_date: requiredText(row, "expense_date"),
+    description: requiredText(row, "description"),
+    amount: numberValue(row, "amount"),
+    currency: requiredText(row, "currency").toUpperCase(),
+    paid_by_type: requiredText(row, "paid_by_type"),
+    paid_by_employee_id: text(row, "paid_by_employee_id"),
+    reimbursement_status: requiredText(row, "reimbursement_status"),
+    reimbursement_amount: numberValue(row, "reimbursement_amount"),
+    approval_status: requiredText(row, "approval_status"),
+    is_historical: booleanValue(row, "is_historical"),
+    requires_review: booleanValue(row, "requires_review"),
+    created_at: requiredText(row, "created_at"),
+    updated_at: requiredText(row, "updated_at"),
+  };
+}
+
+function parseFinancialPeriod(row: RawRow): FinancialPeriod {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: requiredText(row, "organization_id"),
+    period_name: requiredText(row, "period_name"),
+    period_start: requiredText(row, "period_start"),
+    period_end: requiredText(row, "period_end"),
+    status: requiredText(row, "status"),
+    notes: text(row, "notes"),
+  };
+}
+
+function parseTask(row: RawRow): Task {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: text(row, "organization_id"),
+    department_id: text(row, "department_id"),
+    assigned_to: text(row, "assigned_to"),
+    created_by: text(row, "created_by"),
+    kpi_id: text(row, "kpi_id"),
+    title: requiredText(row, "title"),
+    description: text(row, "description"),
+    priority: requiredText(row, "priority"),
+    status: requiredText(row, "status"),
+    progress_percentage: numberValue(row, "progress_percentage"),
+    due_date: text(row, "due_date"),
+    completed_at: text(row, "completed_at"),
+    created_at: requiredText(row, "created_at"),
+    updated_at: requiredText(row, "updated_at"),
+  };
+}
+
+function parseTicket(row: RawRow): Ticket {
+  return {
+    id: requiredText(row, "id"),
+    organization_id: text(row, "organization_id"),
+    department_id: text(row, "department_id"),
+    reported_by: text(row, "reported_by"),
+    assigned_to: text(row, "assigned_to"),
+    kpi_id: text(row, "kpi_id"),
+    ticket_number: numberValue(row, "ticket_number"),
+    title: requiredText(row, "title"),
+    description: text(row, "description"),
+    category: text(row, "category"),
+    priority: requiredText(row, "priority"),
+    status: requiredText(row, "status"),
+    due_date: text(row, "due_date"),
+    resolved_at: text(row, "resolved_at"),
+    created_at: requiredText(row, "created_at"),
+    updated_at: requiredText(row, "updated_at"),
+  };
+}
+
+async function fetchPeople(organizationId: string): Promise<PeopleData> {
+  const [employees, departments] = await Promise.all([
+    selectRows("employees", columns.employees, organizationId),
+    selectRows("departments", columns.departments, organizationId),
+  ]);
+  return {
+    employees: employees.map(parseEmployee),
+    departments: departments.map(parseDepartment),
+  };
+}
+
+async function fetchOperations(
+  organizationId: string,
+): Promise<OperationsData> {
+  const [deadlines, tasks, tickets] = await Promise.all([
+    selectRows("deadlines", columns.deadlines, organizationId),
+    selectRows("tasks", columns.tasks, organizationId),
+    selectRows("tickets", columns.tickets, organizationId),
+  ]);
+  return {
+    deadlines: deadlines.map(parseDeadline),
+    tasks: tasks.map(parseTask),
+    tickets: tickets.map(parseTicket),
+  };
+}
+
+async function fetchKpis(organizationId: string): Promise<KpiData> {
+  const [kpis, targets, results, periods] = await Promise.all([
+    selectRows("kpis", columns.kpis, organizationId),
+    selectRows("kpi_targets", columns.kpiTargets, organizationId),
+    selectRows("kpi_results", columns.kpiResults, organizationId),
+    selectRows("kpi_periods", columns.kpiPeriods, organizationId),
+  ]);
+  return {
+    kpis: kpis.map(parseKpi),
+    targets: targets.map(parseKpiTarget),
+    results: results.map(parseKpiResult),
+    periods: periods.map(parseKpiPeriod),
+  };
+}
+
+async function fetchFinance(organizationId: string): Promise<FinanceData> {
+  const [revenue, expenses, periods] = await Promise.all([
+    selectRows("revenue", columns.revenue, organizationId),
+    selectRows("expenses", columns.expenses, organizationId),
+    selectRows("financial_periods", columns.financialPeriods, organizationId),
+  ]);
+  return {
+    revenue: revenue.map(parseRevenue),
+    expenses: expenses.map(parseExpense),
+    periods: periods.map(parseFinancialPeriod),
+  };
+}
+
+async function fetchAlerts(organizationId: string): Promise<CompanyAlert[]> {
+  const rows = await selectRows(
+    "company_alerts",
+    columns.companyAlerts,
+    organizationId,
+  );
+  return rows.map(parseCompanyAlert).filter(isActiveCompanyAlert);
+}
+
+function useExecutiveQuery<T>(
   scope: string,
-  tables: readonly ExecutiveTable[],
-): ExecutiveQueryState {
+  fetcher: (organizationId: string) => Promise<T>,
+): QueryState<T> {
   const { user, loading: authLoading } = useSupabaseAuth();
-  const organisationState = useCurrentOrganisation();
+  const organizationState = useCurrentOrganisation();
+  const organizationId = organizationState.organizationId;
   const enabled = Boolean(
-    user &&
-    !authLoading &&
-    !organisationState.isLoading &&
-    organisationState.organizationId,
+    user && !authLoading && !organizationState.isLoading && organizationId,
   );
 
   const query = useQuery({
-    queryKey: [
-      "executive-dashboard",
-      scope,
-      user?.id ?? null,
-      organisationState.organizationId,
-    ],
+    queryKey: ["executive-dashboard", scope, user?.id ?? null, organizationId],
     enabled,
-    queryFn: () => fetchTables(tables),
+    queryFn: () => fetcher(organizationId!),
     staleTime: 30_000,
   });
 
@@ -96,151 +588,22 @@ function useExecutiveGroup(
 }
 
 export function useExecutiveAlerts() {
-  return useExecutiveGroup("alerts", [executiveTables.companyAlerts]);
+  return useExecutiveQuery("alerts", fetchAlerts);
 }
 
 export function useExecutiveSummary() {
-  const people = useExecutiveGroup("people", [
-    executiveTables.employees,
-    executiveTables.departments,
-  ]);
-  const operations = useExecutiveGroup("operations", [
-    executiveTables.deadlines,
-    executiveTables.tasks,
-    executiveTables.tickets,
-  ]);
-  const kpis = useExecutiveGroup("kpis", [
-    executiveTables.kpis,
-    executiveTables.kpiPeriods,
-    executiveTables.kpiTargets,
-    executiveTables.kpiResults,
-  ]);
-  const finance = useExecutiveGroup("finance", [
-    executiveTables.revenue,
-    executiveTables.expenses,
-    executiveTables.financialPeriods,
-  ]);
-  const coverage = useExecutiveGroup("coverage", [
-    executiveTables.doctorAcquisition,
-    executiveTables.ambassadors,
-    executiveTables.salesLeads,
-    executiveTables.customerCases,
-    executiveTables.engineeringProjects,
-    executiveTables.securityFindings,
-    executiveTables.securityIncidents,
-    executiveTables.securityRemediations,
-    executiveTables.risks,
-  ]);
-
-  return { people, operations, kpis, finance, coverage };
+  const people = useExecutiveQuery("people", fetchPeople);
+  const operations = useExecutiveQuery("operations", fetchOperations);
+  const kpis = useExecutiveQuery("kpis", fetchKpis);
+  const finance = useExecutiveQuery("finance", fetchFinance);
+  return { people, operations, kpis, finance };
 }
 
-export function rowsFor(
-  data: ExecutiveGroupData | undefined,
-  table: ExecutiveTable,
-) {
-  return data?.[table] ?? [];
-}
-
-function firstValue(record: BackendRecord, keys: readonly string[]) {
-  for (const key of keys) {
-    const value = record[key];
-    if (value !== null && value !== undefined && value !== "") return value;
-  }
-  return null;
-}
-
-export function readRecordString(
-  record: BackendRecord,
-  keys: readonly string[],
-) {
-  const value = firstValue(record, keys);
-  if (typeof value === "string" || typeof value === "number")
-    return String(value);
-  return null;
-}
-
-export function readRecordNumber(
-  record: BackendRecord,
-  keys: readonly string[],
-) {
-  const value = firstValue(record, keys);
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value.replace(/[,\sR]/g, ""));
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
-export function readRecordBoolean(
-  record: BackendRecord,
-  keys: readonly string[],
-) {
-  const value = firstValue(record, keys);
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    if (["true", "yes", "current", "active"].includes(value.toLowerCase()))
-      return true;
-    if (["false", "no", "past", "inactive"].includes(value.toLowerCase()))
-      return false;
-  }
-  return null;
-}
-
-export function recordId(record: BackendRecord) {
-  return readRecordString(record, ["id", "uuid", "record_id"]);
-}
-
-export function recordStatus(record: BackendRecord) {
-  return readRecordString(record, [
-    "status",
-    "state",
-    "lifecycle_status",
-    "result_status",
-  ]);
-}
-
-export function recordDate(record: BackendRecord) {
-  return readRecordString(record, [
-    "due_date",
-    "deadline_date",
-    "date",
-    "scheduled_for",
-    "period_end",
-    "created_at",
-  ]);
-}
-
-export function recordTitle(record: BackendRecord, fallback: string) {
-  return (
-    readRecordString(record, [
-      "title",
-      "name",
-      "subject",
-      "metric",
-      "description",
-      "message",
-    ]) ?? fallback
-  );
-}
-
-export function recordOwner(record: BackendRecord) {
-  return readRecordString(record, [
-    "owner_name",
-    "owner",
-    "assignee_name",
-    "assignee",
-    "assigned_to",
-    "responsible_person",
-  ]);
-}
-
-export function normaliseStatus(status: string | null) {
+export function normaliseStatus(status: string | null | undefined) {
   return status?.trim().toLowerCase().replace(/[_-]+/g, " ") ?? null;
 }
 
-export function isResolvedStatus(status: string | null) {
+export function isResolvedStatus(status: string | null | undefined) {
   return [
     "completed",
     "complete",
@@ -250,228 +613,258 @@ export function isResolvedStatus(status: string | null) {
     "remediated",
     "cancelled",
     "canceled",
+    "expired",
+    "dismissed",
   ].includes(normaliseStatus(status) ?? "");
 }
 
-export function isOpenStatus(status: string | null) {
-  return status ? !isResolvedStatus(status) : null;
+export function isActiveCompanyAlert(
+  alert: CompanyAlert,
+  now = new Date(),
+) {
+  if (alert.resolved_at || isResolvedStatus(alert.status)) return false;
+  const startsAt = new Date(alert.starts_at);
+  const expiresAt = alert.expires_at ? new Date(alert.expires_at) : null;
+  if (!Number.isNaN(startsAt.valueOf()) && startsAt > now) return false;
+  if (expiresAt && !Number.isNaN(expiresAt.valueOf()) && expiresAt <= now)
+    return false;
+  return true;
 }
 
-export function isOverdue(record: BackendRecord, today = new Date()) {
-  const dueDate = recordDate(record);
-  if (!dueDate) return false;
-  const parsed = new Date(dueDate);
-  return (
-    !Number.isNaN(parsed.valueOf()) &&
-    parsed < today &&
-    !isResolvedStatus(recordStatus(record))
+export function isOverdueTimestamp(
+  value: string | null,
+  status: string | null | undefined,
+  now = new Date(),
+) {
+  if (!value || isResolvedStatus(status)) return false;
+  const dueAt = new Date(value);
+  return !Number.isNaN(dueAt.valueOf()) && dueAt < now;
+}
+
+export function isOverdueDate(
+  value: string | null,
+  status: string | null | undefined,
+  now = new Date(),
+) {
+  if (!value || isResolvedStatus(status)) return false;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDate = new Date(`${value}T23:59:59`);
+  return !Number.isNaN(dueDate.valueOf()) && dueDate < today;
+}
+
+function periodContainsDate(
+  startDate: string,
+  endDate: string,
+  date = new Date(),
+) {
+  const currentDate = date.toISOString().slice(0, 10);
+  return currentDate >= startDate && currentDate <= endDate;
+}
+
+function isUsablePeriodStatus(status: string) {
+  return !["closed", "complete", "completed", "cancelled", "canceled"].includes(
+    normaliseStatus(status) ?? "",
   );
 }
 
-export function countActiveRecords(
-  records: BackendRecord[],
-  statusKeys: readonly string[] = ["status", "state", "lifecycle_status"],
-) {
-  if (!records.length) return { value: 0, supported: true };
-  const statusRecords = records
-    .map((record) => readRecordString(record, statusKeys))
-    .filter((status): status is string => Boolean(status));
-  if (!statusRecords.length) return { value: null, supported: false };
-  const activeStatuses = new Set([
-    "active",
-    "current",
-    "live",
-    "enabled",
-    "operational",
-  ]);
-  return {
-    value: statusRecords.filter((status) =>
-      activeStatuses.has(normaliseStatus(status) ?? ""),
-    ).length,
-    supported: true,
-  };
-}
-
-function relatedRecord(records: BackendRecord[], id: string | null) {
-  if (!id) return null;
+export function findCurrentKpiPeriod(periods: KpiPeriod[], now = new Date()) {
   return (
-    records.find(
-      (record) =>
-        readRecordString(record, ["kpi_id", "metric_id", "parent_id"]) === id,
-    ) ?? null
+    periods.find(
+      (period) =>
+        ["current", "active", "open"].includes(
+          normaliseStatus(period.status) ?? "",
+        ) && periodContainsDate(period.start_date, period.end_date, now),
+    ) ??
+    periods.find(
+      (period) =>
+        isUsablePeriodStatus(period.status) &&
+        periodContainsDate(period.start_date, period.end_date, now),
+    ) ??
+    null
   );
-}
-
-function periodRecord(
-  records: BackendRecord[],
-  record: BackendRecord,
-  id: string | null,
-) {
-  const periodId = readRecordString(record, [
-    "period_id",
-    "kpi_period_id",
-    "financial_period_id",
-  ]);
-  if (!periodId) return null;
-  return records.find((period) => recordId(period) === periodId) ?? null;
 }
 
 export type ExecutiveKpiRow = {
   id: string;
   name: string;
+  unit: string | null;
+  measurementType: string;
+  direction: string;
   target: number | null;
   actual: number | null;
-  status: string | null;
-  period: string | null;
-  owner: string | null;
+  calculatedPercentage: number | null;
+  status: string;
+  periodName: string | null;
+  ownerEmployeeId: string | null;
+  commentary: string | null;
 };
 
-export function buildKpiRows(
-  data: ExecutiveGroupData | undefined,
-): ExecutiveKpiRow[] {
-  const kpis = rowsFor(data, executiveTables.kpis);
-  const targets = rowsFor(data, executiveTables.kpiTargets);
-  const results = rowsFor(data, executiveTables.kpiResults);
-  const periods = rowsFor(data, executiveTables.kpiPeriods);
+export function buildKpiRows(data: KpiData | undefined): {
+  rows: ExecutiveKpiRow[];
+  period: KpiPeriod | null;
+} {
+  if (!data) return { rows: [], period: null };
+  const period = findCurrentKpiPeriod(data.periods);
+  if (!period) return { rows: [], period: null };
 
-  return kpis.map((record, index) => {
-    const id = recordId(record) ?? `kpi-${index}`;
-    const targetRecord = relatedRecord(targets, id);
-    const resultRecord = relatedRecord(results, id);
-    const period =
-      periodRecord(periods, record, id) ??
-      periodRecord(periods, targetRecord ?? {}, id) ??
-      periodRecord(periods, resultRecord ?? {}, id);
+  const activeKpis = data.kpis.filter((kpi) => kpi.active);
+  const rows = activeKpis.map((kpi) => {
+    const target = data.targets.find(
+      (candidate) =>
+        candidate.kpi_id === kpi.id && candidate.period_id === period.id,
+    );
+    const result = data.results.find(
+      (candidate) =>
+        candidate.period_id === period.id &&
+        (candidate.target_id === target?.id ||
+          (!target && candidate.kpi_id === kpi.id)),
+    );
     return {
-      id,
-      name: recordTitle(record, "KPI record"),
-      target:
-        readRecordNumber(record, ["target", "target_value", "target_amount"]) ??
-        readRecordNumber(targetRecord ?? {}, [
-          "target",
-          "target_value",
-          "target_amount",
-        ]),
-      actual:
-        readRecordNumber(record, [
-          "actual",
-          "actual_value",
-          "result",
-          "value",
-        ]) ??
-        readRecordNumber(resultRecord ?? {}, [
-          "actual",
-          "actual_value",
-          "result",
-          "value",
-        ]),
-      status:
-        readRecordString(resultRecord ?? {}, [
-          "status",
-          "state",
-          "result_status",
-        ]) ?? readRecordString(record, ["status", "state", "result_status"]),
-      period:
-        readRecordString(period ?? {}, [
-          "name",
-          "label",
-          "period_name",
-          "period_type",
-        ]) ?? readRecordString(record, ["period", "period_name"]),
-      owner:
-        readRecordString(record, ["owner_name", "owner", "employee_name"]) ??
-        readRecordString(resultRecord ?? {}, [
-          "owner_name",
-          "owner",
-          "employee_name",
-        ]),
+      id: kpi.id,
+      name: kpi.name,
+      unit: kpi.unit,
+      measurementType: kpi.measurement_type,
+      direction: kpi.direction,
+      target: target?.target_value ?? null,
+      actual: result?.actual_value ?? null,
+      calculatedPercentage: result?.calculated_percentage ?? null,
+      status: result?.status ?? "",
+      periodName: period.period_name,
+      ownerEmployeeId: kpi.owner_employee_id,
+      commentary: result?.commentary ?? null,
     };
   });
+  return { rows, period };
 }
 
-export function currentPeriodId(periods: BackendRecord[]) {
-  const current = periods.find(
-    (period) =>
-      readRecordBoolean(period, ["is_current", "current", "active"]) === true ||
-      ["current", "active", "open"].includes(
-        normaliseStatus(recordStatus(period)) ?? "",
-      ),
-  );
-  return current ? recordId(current) : null;
-}
-
-function periodFilteredRows(rows: BackendRecord[], periods: BackendRecord[]) {
-  const id = currentPeriodId(periods);
-  if (!id) return rows;
-  const linkedRows = rows.filter(
-    (row) =>
-      readRecordString(row, ["financial_period_id", "period_id"]) !== null,
-  );
-  return linkedRows.length
-    ? linkedRows.filter(
-        (row) =>
-          readRecordString(row, ["financial_period_id", "period_id"]) === id,
-      )
-    : rows;
-}
-
-function sumKnownAmounts(rows: BackendRecord[]) {
-  const values = rows.map((row) =>
-    readRecordNumber(row, [
-      "amount",
-      "amount_zar",
-      "total_amount",
-      "net_amount",
-      "value",
-    ]),
-  );
-  if (rows.length && values.every((value) => value === null)) return null;
-  return values.reduce<number>((total, value) => total + (value ?? 0), 0);
-}
+type MoneyBuckets = Record<string, number>;
 
 export type ExecutiveFinanceSummary = {
-  revenue: number | null;
-  expenses: number | null;
-  netPosition: number | null;
-  periodLabel: string | null;
-  revenueRecords: number;
+  revenue: MoneyBuckets;
+  expenses: MoneyBuckets;
+  netPosition: MoneyBuckets;
+  expenseByPaidType: Record<string, MoneyBuckets>;
+  recognizedRevenueRecords: number;
   expenseRecords: number;
+  periodName: string | null;
 };
 
+function addMoney(
+  buckets: MoneyBuckets,
+  currency: string,
+  amount: number | null,
+) {
+  if (!currency || amount === null) return;
+  buckets[currency] = (buckets[currency] ?? 0) + amount;
+}
+
+function currentFinancialPeriod(periods: FinancialPeriod[], now = new Date()) {
+  return (
+    periods.find(
+      (period) =>
+        ["current", "active", "open"].includes(
+          normaliseStatus(period.status) ?? "",
+        ) &&
+        period.period_start <= now.toISOString().slice(0, 10) &&
+        period.period_end >= now.toISOString().slice(0, 10),
+    ) ?? null
+  );
+}
+
+function inFinancialPeriod(date: string, period: FinancialPeriod | null) {
+  return !period || (date >= period.period_start && date <= period.period_end);
+}
+
 export function buildFinanceSummary(
-  data: ExecutiveGroupData | undefined,
+  data: FinanceData | undefined,
 ): ExecutiveFinanceSummary {
-  const periods = rowsFor(data, executiveTables.financialPeriods);
-  const revenueRows = periodFilteredRows(
-    rowsFor(data, executiveTables.revenue),
-    periods,
+  if (!data) {
+    return {
+      revenue: {},
+      expenses: {},
+      netPosition: {},
+      expenseByPaidType: {},
+      recognizedRevenueRecords: 0,
+      expenseRecords: 0,
+      periodName: null,
+    };
+  }
+
+  const period = currentFinancialPeriod(data.periods);
+  const recognizedRevenue = data.revenue.filter(
+    (row) =>
+      ["recognized", "recognised"].includes(normaliseStatus(row.status) ?? "") &&
+      inFinancialPeriod(row.revenue_date, period),
   );
-  const expenseRows = periodFilteredRows(
-    rowsFor(data, executiveTables.expenses),
-    periods,
+  const expenses = data.expenses.filter((row) =>
+    inFinancialPeriod(row.expense_date, period),
   );
-  const period = periods.find(
-    (item) => recordId(item) === currentPeriodId(periods),
+  const revenueBuckets: MoneyBuckets = {};
+  const expenseBuckets: MoneyBuckets = {};
+  const expenseByPaidType: Record<string, MoneyBuckets> = {};
+
+  recognizedRevenue.forEach((row) =>
+    addMoney(revenueBuckets, row.currency, row.amount),
   );
-  const revenue = sumKnownAmounts(revenueRows);
-  const expenses = sumKnownAmounts(expenseRows);
+  expenses.forEach((row) => {
+    addMoney(expenseBuckets, row.currency, row.amount);
+    const paidType = row.paid_by_type || "Not specified";
+    expenseByPaidType[paidType] ??= {};
+    addMoney(expenseByPaidType[paidType], row.currency, row.amount);
+  });
+
+  const netPosition: MoneyBuckets = {};
+  for (const currency of new Set([
+    ...Object.keys(revenueBuckets),
+    ...Object.keys(expenseBuckets),
+  ])) {
+    netPosition[currency] =
+      (revenueBuckets[currency] ?? 0) - (expenseBuckets[currency] ?? 0);
+  }
+
   return {
-    revenue,
-    expenses,
-    netPosition:
-      revenue !== null && expenses !== null ? revenue - expenses : null,
-    periodLabel: readRecordString(period ?? {}, [
-      "name",
-      "label",
-      "period_name",
-      "period_type",
-    ]),
-    revenueRecords: revenueRows.length,
-    expenseRecords: expenseRows.length,
+    revenue: revenueBuckets,
+    expenses: expenseBuckets,
+    netPosition,
+    expenseByPaidType,
+    recognizedRevenueRecords: recognizedRevenue.length,
+    expenseRecords: expenses.length,
+    periodName: period?.period_name ?? null,
   };
 }
 
-export function statusToDisplay(status: string | null) {
+export function formatMoneyBuckets(buckets: MoneyBuckets) {
+  const entries = Object.entries(buckets);
+  if (!entries.length) return "Awaiting live data";
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([currency, amount]) => {
+      try {
+        return new Intl.NumberFormat("en-ZA", {
+          style: "currency",
+          currency,
+          maximumFractionDigits: 2,
+        }).format(amount);
+      } catch {
+        return `${currency} ${amount.toLocaleString("en-ZA", {
+          maximumFractionDigits: 2,
+        })}`;
+      }
+    })
+    .join(" · ");
+}
+
+export function formatExpensePaidTypes(
+  expenseByPaidType: Record<string, MoneyBuckets>,
+) {
+  const entries = Object.entries(expenseByPaidType);
+  if (!entries.length) return "No expense records";
+  return entries
+    .map(([paidType, amounts]) => `${paidType}: ${formatMoneyBuckets(amounts)}`)
+    .join(" · ");
+}
+
+export function statusToDisplay(status: string | null | undefined) {
   const normalised = normaliseStatus(status);
   if (!normalised) return null;
   if (["healthy", "good", "on track", "ok", "green"].includes(normalised))

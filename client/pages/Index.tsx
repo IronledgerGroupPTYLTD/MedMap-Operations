@@ -18,30 +18,25 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/medmap/AppShell";
 import { cn } from "@/lib/utils";
-import { formatZAR, formatZARWithSign } from "@/lib/medmap-store";
 import { useCurrentOrganisation } from "@/lib/supabase-identity";
 import {
   buildFinanceSummary,
   buildKpiRows,
-  countActiveRecords,
-  isOpenStatus,
-  isOverdue,
+  formatExpensePaidTypes,
+  formatMoneyBuckets,
+  isOverdueDate,
+  isOverdueTimestamp,
   isResolvedStatus,
   normaliseStatus,
-  readRecordString,
-  recordDate,
-  recordId,
-  recordOwner,
-  recordStatus,
-  recordTitle,
-  rowsFor,
   statusToDisplay,
   useExecutiveAlerts,
   useExecutiveSummary,
-  type BackendRecord,
+  type Task,
+  type Ticket,
 } from "@/lib/executive-dashboard";
 
 type Status = "healthy" | "attention" | "critical";
+type WorkRecord = Task | Ticket;
 
 type Metric = {
   label: string;

@@ -222,19 +222,31 @@ type QueryState<T> = {
 };
 
 const columns = {
-  companyAlerts: "id, organization_id, alert_type, title, message, severity, source_type, source_id, status, starts_at, expires_at, acknowledged_at, resolved_at, created_at, updated_at",
-  deadlines: "id, organization_id, department_id, owner_employee_id, title, description, due_at, priority, status, linked_task_id, linked_ticket_id, created_at, updated_at",
-  departments: "id, organization_id, code, name, description, department_group, active",
-  employees: "id, organization_id, first_name, last_name, job_title, department_id, employee_status",
-  kpiPeriods: "id, organization_id, period_type, period_name, start_date, end_date, status",
+  companyAlerts:
+    "id, organization_id, alert_type, title, message, severity, source_type, source_id, status, starts_at, expires_at, acknowledged_at, resolved_at, created_at, updated_at",
+  deadlines:
+    "id, organization_id, department_id, owner_employee_id, title, description, due_at, priority, status, linked_task_id, linked_ticket_id, created_at, updated_at",
+  departments:
+    "id, organization_id, code, name, description, department_group, active",
+  employees:
+    "id, organization_id, first_name, last_name, job_title, department_id, employee_status",
+  kpiPeriods:
+    "id, organization_id, period_type, period_name, start_date, end_date, status",
   kpis: "id, organization_id, department_id, owner_employee_id, name, code, description, category, measurement_type, direction, unit, active",
-  kpiTargets: "id, kpi_id, employee_id, department_id, period_id, target_value, green_threshold, yellow_threshold, critical_threshold, notes",
-  kpiResults: "id, kpi_id, target_id, employee_id, department_id, period_id, actual_value, calculated_percentage, status, commentary",
-  revenue: "id, organization_id, revenue_date, revenue_type, source_entity_type, source_entity_id, amount, currency, status, description, created_at",
-  expenses: "id, organization_id, financial_period_id, expense_date, description, amount, currency, paid_by_type, paid_by_employee_id, reimbursement_status, reimbursement_amount, approval_status, is_historical, requires_review, created_at, updated_at",
-  financialPeriods: "id, organization_id, period_name, period_start, period_end, status, notes",
-  tasks: "id, organization_id, department_id, assigned_to, created_by, kpi_id, title, description, priority, status, progress_percentage, due_date, completed_at, created_at, updated_at",
-  tickets: "id, organization_id, department_id, reported_by, assigned_to, kpi_id, ticket_number, title, description, category, priority, status, due_date, resolved_at, created_at, updated_at",
+  kpiTargets:
+    "id, kpi_id, employee_id, department_id, period_id, target_value, green_threshold, yellow_threshold, critical_threshold, notes",
+  kpiResults:
+    "id, kpi_id, target_id, employee_id, department_id, period_id, actual_value, calculated_percentage, status, commentary",
+  revenue:
+    "id, organization_id, revenue_date, revenue_type, source_entity_type, source_entity_id, amount, currency, status, description, created_at",
+  expenses:
+    "id, organization_id, financial_period_id, expense_date, description, amount, currency, paid_by_type, paid_by_employee_id, reimbursement_status, reimbursement_amount, approval_status, is_historical, requires_review, created_at, updated_at",
+  financialPeriods:
+    "id, organization_id, period_name, period_start, period_end, status, notes",
+  tasks:
+    "id, organization_id, department_id, assigned_to, created_by, kpi_id, title, description, priority, status, progress_percentage, due_date, completed_at, created_at, updated_at",
+  tickets:
+    "id, organization_id, department_id, reported_by, assigned_to, kpi_id, ticket_number, title, description, category, priority, status, due_date, resolved_at, created_at, updated_at",
 } as const;
 
 function isRawRow(value: unknown): value is RawRow {
@@ -266,20 +278,32 @@ function booleanValue(row: RawRow, key: string): boolean {
   return row[key] === true;
 }
 
-function selectRows(
+async function selectRows(
   table: string,
   selection: string,
   organizationId: string,
 ): Promise<RawRow[]> {
-  return getSupabaseClient()
+  const { data, error } = await getSupabaseClient()
     .from(table)
     .select(selection)
-    .eq("organization_id", organizationId)
-    .then(({ data, error }) => {
-      if (error) throw error;
-      const responseData: unknown = data;
-      return rawRows(responseData);
-    });
+    .eq("organization_id", organizationId);
+  if (error) throw error;
+  return rawRows(data);
+}
+
+async function selectRelatedRows(
+  table: string,
+  selection: string,
+  filters: { column: string; values: string[] }[],
+): Promise<RawRow[]> {
+  if (filters.some(({ values }) => values.length === 0)) return [];
+  let query = getSupabaseClient().from(table).select(selection);
+  for (const { column, values } of filters) {
+    query = query.in(column, values);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return rawRows(data);
 }
 
 function parseCompanyAlert(row: RawRow): CompanyAlert {
@@ -520,17 +544,25 @@ async function fetchOperations(
 }
 
 async function fetchKpis(organizationId: string): Promise<KpiData> {
-  const [kpis, targets, results, periods] = await Promise.all([
+  const [kpiRows, periodRows] = await Promise.all([
     selectRows("kpis", columns.kpis, organizationId),
-    selectRows("kpi_targets", columns.kpiTargets, organizationId),
-    selectRows("kpi_results", columns.kpiResults, organizationId),
     selectRows("kpi_periods", columns.kpiPeriods, organizationId),
   ]);
+  const kpis = kpiRows.map(parseKpi);
+  const periods = periodRows.map(parseKpiPeriod);
+  const relationshipFilters = [
+    { column: "kpi_id", values: kpis.map((kpi) => kpi.id) },
+    { column: "period_id", values: periods.map((period) => period.id) },
+  ];
+  const [targetRows, resultRows] = await Promise.all([
+    selectRelatedRows("kpi_targets", columns.kpiTargets, relationshipFilters),
+    selectRelatedRows("kpi_results", columns.kpiResults, relationshipFilters),
+  ]);
   return {
-    kpis: kpis.map(parseKpi),
-    targets: targets.map(parseKpiTarget),
-    results: results.map(parseKpiResult),
-    periods: periods.map(parseKpiPeriod),
+    kpis,
+    targets: targetRows.map(parseKpiTarget),
+    results: resultRows.map(parseKpiResult),
+    periods,
   };
 }
 
@@ -553,7 +585,9 @@ async function fetchAlerts(organizationId: string): Promise<CompanyAlert[]> {
     columns.companyAlerts,
     organizationId,
   );
-  return rows.map(parseCompanyAlert).filter(isActiveCompanyAlert);
+  return rows
+    .map(parseCompanyAlert)
+    .filter((alert) => isActiveCompanyAlert(alert));
 }
 
 function useExecutiveQuery<T>(
@@ -618,10 +652,7 @@ export function isResolvedStatus(status: string | null | undefined) {
   ].includes(normaliseStatus(status) ?? "");
 }
 
-export function isActiveCompanyAlert(
-  alert: CompanyAlert,
-  now = new Date(),
-) {
+export function isActiveCompanyAlert(alert: CompanyAlert, now = new Date()) {
   if (alert.resolved_at || isResolvedStatus(alert.status)) return false;
   const startsAt = new Date(alert.starts_at);
   const expiresAt = alert.expires_at ? new Date(alert.expires_at) : null;
@@ -793,8 +824,9 @@ export function buildFinanceSummary(
   const period = currentFinancialPeriod(data.periods);
   const recognizedRevenue = data.revenue.filter(
     (row) =>
-      ["recognized", "recognised"].includes(normaliseStatus(row.status) ?? "") &&
-      inFinancialPeriod(row.revenue_date, period),
+      ["recognized", "recognised"].includes(
+        normaliseStatus(row.status) ?? "",
+      ) && inFinancialPeriod(row.revenue_date, period),
   );
   const expenses = data.expenses.filter((row) =>
     inFinancialPeriod(row.expense_date, period),
